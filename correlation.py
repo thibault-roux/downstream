@@ -1,4 +1,5 @@
-from translate import Translator
+from deep_translator import GoogleTranslator as Translator
+import progressbar
 
 
 def read_hats():
@@ -17,8 +18,13 @@ def read_hats():
             dataset.append(dictionary)
     return dataset
 
-def translate_hats_and_save(dataset, translator):
+def translate_hats_and_save(dataset):
+    translator = Translator(source='fr', target='en')
     txt = ""
+    # progressbar
+    bar = progressbar.ProgressBar(maxval=len(dataset))
+    bar.start()
+    i = 0
     for dictionary in dataset:
         ref = dictionary["reference"]
         hypA = dictionary["hypA"]
@@ -28,7 +34,9 @@ def translate_hats_and_save(dataset, translator):
         tradhypB = translator.translate(hypB)
         txt += ref + "\t" + hypA + "\t" + tradref + "\t" + tradhypA + "\n"
         txt += ref + "\t" + hypB + "\t" + tradref + "\t" + tradhypB + "\n"
-        break
+
+        bar.update(i)
+        i += 1
 
     with open("datasets/hats_with_translations.txt", "w", encoding="utf8") as file:
         file.write(txt)
@@ -47,11 +55,9 @@ def load_translated_hats():
     return dataset
 
 if __name__ == '__main__':
-
-    translator = Translator(from_lang="fr", to_lang="en")
     
     dataset = read_hats()
-    translate_hats_and_save(dataset, translator)
+    translate_hats_and_save(dataset)
     dataset = load_translated_hats()
     for e in dataset:
         print(e)
