@@ -106,13 +106,25 @@ def save_semdist_bertscore(verbose=True):
     with open("datasets/hats_with_semdist_bertscore.txt", "w", encoding="utf8") as file:
         file.write(txt)
 
+    def load_semdist_bertscore():
+        dataset = []
+        with open("datasets/hats_with_semdist_bertscore.txt", "r", encoding="utf8") as file:
+            for line in file:
+                line = line[:-1].split("\t")
+                dictionary = dict()
+                dictionary["reference"] = line[0]
+                dictionary["hyp"] = line[1]
+                dictionary["tradref"] = line[2]
+                dictionary["tradhyp"] = line[3]
+                dictionary["semdist"] = line[4]
+                dictionary["bertscore"] = line[5]
+                dataset.append(dictionary)
+        return dataset
+
 if __name__ == '__main__':
     
     # dataset = read_hats()
     # translate_hats_and_save(dataset)
-    
-    dataset = load_translated_hats()
-    for e in dataset:
-        print(e)
+    save_semdist_bertscore()
 
     
