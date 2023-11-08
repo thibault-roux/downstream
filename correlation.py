@@ -33,7 +33,7 @@ def translate_hats_and_save(dataset, translator):
     with open("datasets/hats_with_translations.txt", "w", encoding="utf8") as file:
         file.write(txt)
 
-def load translated_hats():
+def load_translated_hats():
     dataset = []
     with open("datasets/hats_with_translations.txt", "r", encoding="utf8") as file:
         for line in file:
@@ -53,4 +53,5 @@ if __name__ == '__main__':
     dataset = read_hats()
     translate_hats_and_save(dataset, translator)
     dataset = load_translated_hats()
-    print(dataset)
+    for e in dataset:
+        print(e)
