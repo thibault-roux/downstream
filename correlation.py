@@ -134,11 +134,33 @@ def compute_correlation():
     from scipy.stats import spearmanr
     print("spearman:", spearmanr(semdist, bertscore))
 
+def correct_and_save():
+    # correct word error in the hypothesis and compute the improvements
+    dataset = load_semdist_bertscore()
+    txt = ""
+    for dictionary in dataset:
+        ref = dictionary["reference"]
+        hyp = dictionary["hyp"]
+        tradref = dictionary["tradref"]
+        tradhyp = dictionary["tradhyp"]
+        semdist = float(dictionary["semdist"])
+        bertscore = float(dictionary["bertscore"])
+        corrections = corrector(ref, hyp) # list of possible word corrections
+        txt += ref + "\t" + hyp + "\t" + tradref + "\t" + tradhyp + "\t" + str(semdist) + "\t" + str(bertscore)
+        for correction in corrections:
+            semdist_correction = semdist(ref, correction, semdist_model)
+            bertscore_correction = bertscore(tradref, tradhyp, bertscore_model)
+            txt += "\t" + correction + "," + str(semdist_correction) + "," + str(bertscore_correction)
+        txt += "\n"
+    with open("datasets/hats_with_corrections.txt", "w", encoding="utf8") as file:
+        file.write(txt)
+
 if __name__ == '__main__':
     
     # dataset = read_hats()
     # translate_hats_and_save(dataset)
     # save_semdist_bertscore(verbose=False)
-    compute_correlation()
-
     
+    # compute_correlation()
+
+    correct_and_save()
