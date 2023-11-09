@@ -130,7 +130,9 @@ def compute_correlation():
         semdist.append(float(dictionary["semdist"]))
         bertscore.append(float(dictionary["bertscore"]))
     from scipy.stats import pearsonr
-    print(pearsonr(semdist, bertscore))
+    print("pearson:", pearsonr(semdist, bertscore))
+    from scipy.stats import spearmanr
+    print("spearman:", spearmanr(semdist, bertscore))
 
 if __name__ == '__main__':
     
