@@ -1,7 +1,9 @@
 from deep_translator import GoogleTranslator as Translator
 import progressbar
 
-from sklearn.metrics.pairwise import cosine_similarity
+from utils import corrector
+
+# from sklearn.metrics.pairwise import cosine_similarity
 
 
 def read_hats():
@@ -134,31 +136,6 @@ def compute_correlation():
     from scipy.stats import spearmanr
     print("spearman:", spearmanr(semdist, bertscore))
 
-def corrector(ref, hyp):
-    # returns a list of possible corrections according to levenshtein alignment
-    ref = ref.split(" ")
-    hyp = hyp.split(" ")
-    corrections = []
-    for i in range(len(ref)):
-        for j in range(len(hyp)):
-            if ref[i] != hyp[j]:
-                # swap
-                hyp[i], hyp[j] = hyp[j], hyp[i]
-                corrections.append(" ".join(hyp))
-                hyp[i], hyp[j] = hyp[j], hyp[i]
-                # delete
-                del hyp[j]
-                corrections.append(" ".join(hyp))
-                hyp.insert(j, ref[i])
-                # insert
-                hyp.insert(j, ref[i])
-                corrections.append(" ".join(hyp))
-                del hyp[j]
-                # replace
-                hyp[j] = ref[i]
-                corrections.append(" ".join(hyp))
-                hyp[j] = ref[i]
-    return corrections
 
 def correct_and_save():
     # correct word error in the hypothesis and compute the improvements
