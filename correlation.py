@@ -1,7 +1,7 @@
 from deep_translator import GoogleTranslator as Translator
 import progressbar
 
-from utils import corrector
+from utils.utils import corrector
 
 # from sklearn.metrics.pairwise import cosine_similarity
 
@@ -168,5 +168,5 @@ if __name__ == '__main__':
 
     # correct_and_save()
 
-    for correction in corrector("a b c d", "a b d c"):
+    for correction in corrector("salut tu vas bien", "salut tue va vien"):
         print(correction)
