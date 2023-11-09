@@ -143,17 +143,17 @@ def correcter(ref, hyp, corrected, errors):
 
 
 
-
-def MinWER(ref, hyp):
+# generate all possibilities of correction at level 1
+def corrector(ref, hyp):
     errors, distance = awer(ref.split(" "), hyp.split(" "))
     base_errors = ''.join(errors)
     level = {''.join(str(x) for x in [0]*distance)}
     # base_errors = ['esieed']
     # distance = 3
     # level = {000}
+    corrections = []
+    level = get_next_level(level)
     for node in level:  # maybe it's better to compute the metric of the first before pursuing?
         corrected_hyp = correcter(ref, hyp, node, base_errors)
-        print(corrected_hyp)
-
-if __name__ == "__main__":
-    MinWER("salut tu vas bien", "salut tue va vien")
+        corrections.append(corrected_hyp)
+    return corrections
