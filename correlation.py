@@ -107,30 +107,30 @@ def save_semdist_bertscore(verbose=True):
     with open("datasets/hats_with_semdist_bertscore.txt", "w", encoding="utf8") as file:
         file.write(txt)
 
-    def load_semdist_bertscore():
-        dataset = []
-        with open("datasets/hats_with_semdist_bertscore.txt", "r", encoding="utf8") as file:
-            for line in file:
-                line = line[:-1].split("\t")
-                dictionary = dict()
-                dictionary["reference"] = line[0]
-                dictionary["hyp"] = line[1]
-                dictionary["tradref"] = line[2]
-                dictionary["tradhyp"] = line[3]
-                dictionary["semdist"] = line[4]
-                dictionary["bertscore"] = line[5]
-                dataset.append(dictionary)
-        return dataset
+def load_semdist_bertscore():
+    dataset = []
+    with open("datasets/hats_with_semdist_bertscore.txt", "r", encoding="utf8") as file:
+        for line in file:
+            line = line[:-1].split("\t")
+            dictionary = dict()
+            dictionary["reference"] = line[0]
+            dictionary["hyp"] = line[1]
+            dictionary["tradref"] = line[2]
+            dictionary["tradhyp"] = line[3]
+            dictionary["semdist"] = line[4]
+            dictionary["bertscore"] = line[5]
+            dataset.append(dictionary)
+    return dataset
 
-    def compute_correlation():
-        dataset = load_semdist_bertscore()
-        semdist = []
-        bertscore = []
-        for dictionary in dataset:
-            semdist.append(float(dictionary["semdist"]))
-            bertscore.append(float(dictionary["bertscore"]))
-        from scipy.stats import pearsonr
-        print(pearsonr(semdist, bertscore))
+def compute_correlation():
+    dataset = load_semdist_bertscore()
+    semdist = []
+    bertscore = []
+    for dictionary in dataset:
+        semdist.append(float(dictionary["semdist"]))
+        bertscore.append(float(dictionary["bertscore"]))
+    from scipy.stats import pearsonr
+    print(pearsonr(semdist, bertscore))
 
 if __name__ == '__main__':
     
