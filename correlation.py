@@ -140,6 +140,15 @@ def compute_correlation():
 def correct_and_save():
     # correct word error in the hypothesis and compute the improvements
     dataset = load_semdist_bertscore()
+
+    # SemDist Sentence Camembert-large
+    from sentence_transformers import SentenceTransformer
+    semdist_model = SentenceTransformer('dangvantuan/sentence-camembert-large')
+
+    # BERTScore
+    from bert_score import BERTScorer
+    bertscore_model = BERTScorer(lang="en")
+    
     txt = ""
     for dictionary in dataset:
         ref = dictionary["reference"]
@@ -166,7 +175,4 @@ if __name__ == '__main__':
     
     # compute_correlation()
 
-    # correct_and_save()
-
-    for correction in corrector("salut tu vas bien", "salut tue va vien"):
-        print(correction)
+    correct_and_save()
