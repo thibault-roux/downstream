@@ -122,10 +122,21 @@ def save_semdist_bertscore(verbose=True):
                 dataset.append(dictionary)
         return dataset
 
+    def compute_correlation():
+        dataset = load_semdist_bertscore()
+        semdist = []
+        bertscore = []
+        for dictionary in dataset:
+            semdist.append(float(dictionary["semdist"]))
+            bertscore.append(float(dictionary["bertscore"]))
+        from scipy.stats import pearsonr
+        print(pearsonr(semdist, bertscore))
+
 if __name__ == '__main__':
     
     # dataset = read_hats()
     # translate_hats_and_save(dataset)
-    save_semdist_bertscore()
+    # save_semdist_bertscore(verbose=False)
+    compute_correlation()
 
     
