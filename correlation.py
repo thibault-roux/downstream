@@ -134,6 +134,32 @@ def compute_correlation():
     from scipy.stats import spearmanr
     print("spearman:", spearmanr(semdist, bertscore))
 
+def corrector(ref, hyp):
+    # returns a list of possible corrections according to levenshtein alignment
+    ref = ref.split(" ")
+    hyp = hyp.split(" ")
+    corrections = []
+    for i in range(len(ref)):
+        for j in range(len(hyp)):
+            if ref[i] != hyp[j]:
+                # swap
+                hyp[i], hyp[j] = hyp[j], hyp[i]
+                corrections.append(" ".join(hyp))
+                hyp[i], hyp[j] = hyp[j], hyp[i]
+                # delete
+                del hyp[j]
+                corrections.append(" ".join(hyp))
+                hyp.insert(j, ref[i])
+                # insert
+                hyp.insert(j, ref[i])
+                corrections.append(" ".join(hyp))
+                del hyp[j]
+                # replace
+                hyp[j] = ref[i]
+                corrections.append(" ".join(hyp))
+                hyp[j] = ref[i]
+    return corrections
+
 def correct_and_save():
     # correct word error in the hypothesis and compute the improvements
     dataset = load_semdist_bertscore()
@@ -163,4 +189,7 @@ if __name__ == '__main__':
     
     # compute_correlation()
 
-    correct_and_save()
+    # correct_and_save()
+
+    for correction in corrector("a b c d", "a b d c"):
+        print(correction)
