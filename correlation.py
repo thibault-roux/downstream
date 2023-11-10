@@ -149,7 +149,7 @@ def correct_and_save(verbose=False):
     from bert_score import BERTScorer
     bertscore_model = BERTScorer(lang="en")
     
-    import time
+    translator = Translator(source='fr', target='en')
 
     txt = ""
     if verbose:
@@ -164,31 +164,21 @@ def correct_and_save(verbose=False):
         tradhyp = dictionary["tradhyp"]
         semdist_score = float(dictionary["semdist"])
         bertscore_score = float(dictionary["bertscore"])
-
-        # measure time to process corrector function
-        start = time.time()
         corrections = corrector(ref, hyp) # list of possible word corrections
-        end = time.time()
-        print()
-        print("time1:", end-start)
-
         txt += ref + "\t" + hyp + "\t" + tradref + "\t" + tradhyp + "\t" + str(semdist_score) + "\t" + str(bertscore_score)
         for correction in corrections:
-            start = time.time()
             semdist_correction = semdist(ref, correction, semdist_model)
-            end = time.time()
-            print("time2:", (end-start)/2)
-            start = time.time()
-            bertscore_correction = bertscore(tradref, tradhyp, bertscore_model)
-            end = time.time()
-            print("time3:", (end-start)/2)
-            txt += "\t" + correction + "," + str(semdist_correction) + "," + str(bertscore_correction)
+            tradcorrection = translator.translate(correction)
+            bertscore_correction = bertscore(tradref, tradcorrection, bertscore_model) # WRONG, we should translate the correction
+            txt += "\t" + correction + "," + str(semdist_correction) + "," + tradcorrection + "," + str(bertscore_correction)
         txt += "\n"
         if verbose:
             bar.update(i)
             i += 1
+        break
     with open("datasets/hats_with_corrections.txt", "w", encoding="utf8") as file:
         file.write(txt)
+    print("Function worked properly.")
 
 if __name__ == '__main__':
     
