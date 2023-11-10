@@ -3,7 +3,7 @@ import progressbar
 
 from utils.utils import corrector
 
-# from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def read_hats():
@@ -137,7 +137,7 @@ def compute_correlation():
     print("spearman:", spearmanr(semdist, bertscore))
 
 
-def correct_and_save():
+def correct_and_save(verbose=True):
     # correct word error in the hypothesis and compute the improvements
     dataset = load_semdist_bertscore()
 
@@ -150,20 +150,28 @@ def correct_and_save():
     bertscore_model = BERTScorer(lang="en")
     
     txt = ""
+    if verbose:
+        # progressbar
+        bar = progressbar.ProgressBar(maxval=len(dataset))
+        bar.start()
+        i = 0
     for dictionary in dataset:
         ref = dictionary["reference"]
         hyp = dictionary["hyp"]
         tradref = dictionary["tradref"]
         tradhyp = dictionary["tradhyp"]
-        semdist = float(dictionary["semdist"])
+        semdist_score = float(dictionary["semdist"])
         bertscore = float(dictionary["bertscore"])
         corrections = corrector(ref, hyp) # list of possible word corrections
-        txt += ref + "\t" + hyp + "\t" + tradref + "\t" + tradhyp + "\t" + str(semdist) + "\t" + str(bertscore)
+        txt += ref + "\t" + hyp + "\t" + tradref + "\t" + tradhyp + "\t" + str(semdist_score) + "\t" + str(bertscore)
         for correction in corrections:
             semdist_correction = semdist(ref, correction, semdist_model)
             bertscore_correction = bertscore(tradref, tradhyp, bertscore_model)
             txt += "\t" + correction + "," + str(semdist_correction) + "," + str(bertscore_correction)
         txt += "\n"
+        if verbose:
+            bar.update(i)
+            i += 1
     with open("datasets/hats_with_corrections.txt", "w", encoding="utf8") as file:
         file.write(txt)
 
