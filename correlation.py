@@ -149,6 +149,8 @@ def correct_and_save(verbose=True):
     from bert_score import BERTScorer
     bertscore_model = BERTScorer(lang="en")
     
+    import time
+    
     txt = ""
     if verbose:
         # progressbar
@@ -161,9 +163,15 @@ def correct_and_save(verbose=True):
         tradref = dictionary["tradref"]
         tradhyp = dictionary["tradhyp"]
         semdist_score = float(dictionary["semdist"])
-        bertscore = float(dictionary["bertscore"])
+        bertscore_score = float(dictionary["bertscore"])
+
+        # measure time to process corrector function
+        start = time.time()
         corrections = corrector(ref, hyp) # list of possible word corrections
-        txt += ref + "\t" + hyp + "\t" + tradref + "\t" + tradhyp + "\t" + str(semdist_score) + "\t" + str(bertscore)
+        end = time.time()
+        print("time:", end-start)
+
+        txt += ref + "\t" + hyp + "\t" + tradref + "\t" + tradhyp + "\t" + str(semdist_score) + "\t" + str(bertscore_score)
         for correction in corrections:
             semdist_correction = semdist(ref, correction, semdist_model)
             bertscore_correction = bertscore(tradref, tradhyp, bertscore_model)
