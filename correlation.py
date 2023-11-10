@@ -137,7 +137,7 @@ def compute_correlation():
     print("spearman:", spearmanr(semdist, bertscore))
 
 
-def correct_and_save(verbose=True):
+def correct_and_save(verbose=False):
     # correct word error in the hypothesis and compute the improvements
     dataset = load_semdist_bertscore()
 
@@ -150,7 +150,7 @@ def correct_and_save(verbose=True):
     bertscore_model = BERTScorer(lang="en")
     
     import time
-    
+
     txt = ""
     if verbose:
         # progressbar
@@ -169,12 +169,19 @@ def correct_and_save(verbose=True):
         start = time.time()
         corrections = corrector(ref, hyp) # list of possible word corrections
         end = time.time()
-        print("time:", end-start)
+        print()
+        print("time1:", end-start)
 
         txt += ref + "\t" + hyp + "\t" + tradref + "\t" + tradhyp + "\t" + str(semdist_score) + "\t" + str(bertscore_score)
         for correction in corrections:
+            start = time.time()
             semdist_correction = semdist(ref, correction, semdist_model)
+            end = time.time()
+            print("time2:", (end-start)/2)
+            start = time.time()
             bertscore_correction = bertscore(tradref, tradhyp, bertscore_model)
+            end = time.time()
+            print("time3:", (end-start)/2)
             txt += "\t" + correction + "," + str(semdist_correction) + "," + str(bertscore_correction)
         txt += "\n"
         if verbose:
