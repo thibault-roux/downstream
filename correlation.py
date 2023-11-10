@@ -169,13 +169,12 @@ def correct_and_save(verbose=False):
         for correction in corrections:
             semdist_correction = semdist(ref, correction, semdist_model)
             tradcorrection = translator.translate(correction)
-            bertscore_correction = bertscore(tradref, tradcorrection, bertscore_model) # WRONG, we should translate the correction
-            txt += "\t" + correction + "," + str(semdist_correction) + "," + tradcorrection + "," + str(bertscore_correction)
+            bertscore_correction = bertscore(tradref, tradcorrection, bertscore_model)
+            txt += "\t" + correction + "," + tradcorrection + "," + str(semdist_correction) + "," + str(bertscore_correction)
         txt += "\n"
         if verbose:
             bar.update(i)
             i += 1
-        break
     with open("datasets/hats_with_corrections.txt", "w", encoding="utf8") as file:
         file.write(txt)
     print("Function worked properly.")
