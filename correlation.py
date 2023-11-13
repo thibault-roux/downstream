@@ -124,7 +124,7 @@ def load_semdist_bertscore():
             dataset.append(dictionary)
     return dataset
 
-def compute_correlation():
+def compute_correlation_intrinsic_extrinsic():
     dataset = load_semdist_bertscore()
     semdist = []
     bertscore = []
@@ -179,12 +179,32 @@ def correct_and_save(verbose=False):
         file.write(txt)
     print("Function worked properly.")
 
+
+def load_corrected_hats():
+    dataset = []
+    with open("datasets/hats_with_corrections.txt", "r", encoding="utf8") as file:
+        for line in file:
+            line = line[:-1].split("\t")
+            dictionary = dict()
+            dictionary["reference"] = line[0]
+            dictionary["hyp"] = line[1]
+            dictionary["tradref"] = line[2]
+            dictionary["tradhyp"] = line[3]
+            dictionary["semdist"] = line[4]
+            dictionary["bertscore"] = line[5]
+            dictionary["corrections"] = []
+            for i in range(6, len(line)):
+                dictionary["corrections"].append(line[i].split(","))
+            dataset.append(dictionary)
+    return dataset
+
 if __name__ == '__main__':
     
     # dataset = read_hats()
     # translate_hats_and_save(dataset)
     # save_semdist_bertscore(verbose=False)
-    
-    # compute_correlation()
-
-    correct_and_save()
+    # compute_correlation_intrinsic_extrinsic()
+    # correct_and_save()
+    dataset = load_corrected_hats()
+    print(dataset[0])
+    # compute_correlation_minED_extrinsic()
