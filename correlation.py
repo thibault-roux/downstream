@@ -339,9 +339,12 @@ def correlation_best():
 
     best_agree = 0
     disagree = 0
+    skipped = 0
     for i in range(len(improvements_intrinsic)):
         if len(improvements_intrinsic[i]) < 2:
+            skipped += 1
             continue
+
         
         # compute rank of intrinsic and extrinsic list
         intrinsic_rank = []
@@ -349,8 +352,8 @@ def correlation_best():
         for j in range(len(improvements_intrinsic[i])):
             intrinsic_rank.append((j, improvements_intrinsic[i][j]))
             extrinsic_rank.append((j, improvements_extrinsic[i][j]))
-        intrinsic_rank.sort(key=lambda x: x[1])
-        extrinsic_rank.sort(key=lambda x: x[1])
+        intrinsic_rank.sort(key=lambda x: x[1], reverse=True)
+        extrinsic_rank.sort(key=lambda x: x[1], reverse=True)        
 
         # check if the best correction is the same for intrinsic and extrinsic metrics
         if intrinsic_rank[0][0] == extrinsic_rank[0][0]:
@@ -358,8 +361,12 @@ def correlation_best():
         else:
             disagree += 1
 
+    print("skipped:", skipped, "out of", len(improvements_intrinsic), "times.")
     print("best_agree:", best_agree, "out of", len(improvements_intrinsic), "times.")
     print("disagree:", disagree, "out of", len(improvements_intrinsic), "times.")
+
+    # 1/3 + 1/1000 + 1/2 ~ 3/1005
+    # 2/3 + 500/1000 + 2/2
 
 if __name__ == '__main__':
     
@@ -371,4 +378,5 @@ if __name__ == '__main__':
     # dataset = load_corrected_hats()
     # load_only_improvements()
     # compute_correlation_minED_extrinsic()
-    correlation_minED_extrinsic_local()
+    # correlation_minED_extrinsic_local()
+    correlation_best()
