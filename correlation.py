@@ -238,8 +238,10 @@ def load_only_improvements():
         for correction in dictionary["corrections"]:
             semdist_correction = float(correction[-2])
             bertscore_correction = float(correction[-1])
-            improvements_intrinsic.append(semdist_score-semdist_correction)
-            improvements_extrinsic.append(bertscore_score-bertscore_correction)
+            improvement_intrinsic = semdist_correction/semdist_score*100 - 100
+            improvement_extrinsic = bertscore_correction/bertscore_score*100 - 100
+            improvements_intrinsic.append(improvement_intrinsic)
+            improvements_extrinsic.append(improvement_extrinsic)
     return improvements_intrinsic, improvements_extrinsic
 
 
