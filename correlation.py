@@ -199,27 +199,31 @@ def load_corrected_hats():
     print(dataset[0])
     return dataset
 
-def repair_corrected_dataset():
-    import jiwer
+def repair_corrected_dataset(): # does not work because it is not easy to find where the comma are really
     # load the dataset and repair it by selecting only float numbers
     with open("datasets/hats_with_corrections.txt", "r", encoding="utf8") as file:
         txt = ""
         nbrError = 0
         commaInref = 0
+        commaInhyp = 0
         for line in file:
             linesplit = line[:-1].split("\t")
             ref = linesplit[0]
+            hyp = linesplit[1]
             if "," in ref:
                 commaInref += 1
+            if "," in hyp:
+                commaInhyp += 1
             corrections = linesplit[6:]
             for quadruple in corrections:
                 if len(quadruple.split(",")) != 4:
-                    # print(line)
-                    #input()
-                    # print(quadruple)
+                    print(line)
+                    input()
+                    print(quadruple)
                     nbrError += 1
         print("nbrError:", nbrError)
         print("commaInref:", commaInref)
+        print("commaInhyp:", commaInhyp)
         # should check if there is a comma in references
         # I can keep the first as a real comma and the one preceding numbers?
         # also check if there are numbers in the references or hypotheses?
@@ -229,18 +233,23 @@ def load_only_improvements():
     improvements_extrinsic = []
     dataset = load_corrected_hats()
     for dictionary in dataset:
-        print()
-        print(dictionary)
         semdist_score = float(dictionary["semdist"])
         bertscore_score = float(dictionary["bertscore"])
         for correction in dictionary["corrections"]:
-            semdist_correction = float(correction[2])
-            bertscore_correction = float(correction[3])
+            semdist_correction = float(correction[-2])
+            bertscore_correction = float(correction[-1])
             improvements_intrinsic.append(semdist_score-semdist_correction)
             improvements_extrinsic.append(bertscore_score-bertscore_correction)
-            print(semdist_score-semdist_correction, bertscore_score-bertscore_correction)
-        input()
     return improvements_intrinsic, improvements_extrinsic
+
+
+def compute_correlation_minED_extrinsic():
+    # compute correlation between the minimum edit distance and the extrinsic metric
+    improvements_intrinsic, improvements_extrinsic = load_only_improvements()
+    from scipy.stats import pearsonr
+    print("pearson:", pearsonr(improvements_intrinsic, improvements_extrinsic))
+    from scipy.stats import spearmanr
+    print("spearman:", spearmanr(improvements_intrinsic, improvements_extrinsic))
 
 
 if __name__ == '__main__':
@@ -251,7 +260,5 @@ if __name__ == '__main__':
     # compute_correlation_intrinsic_extrinsic()
     # correct_and_save()
     # dataset = load_corrected_hats()
-    repair_corrected_dataset()
-    exit()
-    load_only_improvements()
+    # load_only_improvements()
     # compute_correlation_minED_extrinsic()
