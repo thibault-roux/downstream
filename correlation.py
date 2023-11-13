@@ -294,13 +294,24 @@ def load_list_improvements(soustraction=True):
     return improvements_intrinsic, improvements_extrinsic
 
 
-# def compute_correlation_minED_extrinsic():
-#     # compute correlation between the minimum edit distance and the extrinsic metric
-#     improvements_intrinsic, improvements_extrinsic = load_only_improvements()
-#     from scipy.stats import pearsonr
-#     print("pearson:", pearsonr(improvements_intrinsic, improvements_extrinsic))
-#     from scipy.stats import spearmanr
-#     print("spearman:", spearmanr(improvements_intrinsic, improvements_extrinsic))
+def compute_correlation_minED_extrinsic_local():
+    # compute correlation between the minimum edit distance and the extrinsic metric
+    from scipy.stats import pearsonr
+    from scipy.stats import spearmanr
+    # print("pearson:", pearsonr(improvements_intrinsic, improvements_extrinsic))
+    # print("spearman:", spearmanr(improvements_intrinsic, improvements_extrinsic))
+
+    improvements_intrinsic, improvements_extrinsic = load_list_improvements()
+    pearsons = []
+    spearmans = []
+    for i in range(len(improvements_intrinsic)):
+        pearson = pearsonr(improvements_intrinsic[i], improvements_extrinsic[i])
+        spearman = append(spearmanr(improvements_intrinsic[i], improvements_extrinsic[i])
+
+        pearsons.append(pearson)
+        spearmans.append(spearman)
+    print("pearson:", sum(pearsons)/len(pearsons))
+    print("spearman:", sum(spearmans)/len(spearmans
 
 
 if __name__ == '__main__':
@@ -313,7 +324,4 @@ if __name__ == '__main__':
     # dataset = load_corrected_hats()
     # load_only_improvements()
     # compute_correlation_minED_extrinsic()
-    intr, extr = load_list_improvements()
-    for i in range(len(intr)):
-        print(intr[i], extr[i])
-        input()
+    compute_correlation_minED_extrinsic_local()
