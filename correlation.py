@@ -228,20 +228,32 @@ def repair_corrected_dataset(): # does not work because it is not easy to find w
         # I can keep the first as a real comma and the one preceding numbers?
         # also check if there are numbers in the references or hypotheses?
 
-def load_only_improvements():
+def load_only_improvements(soustraction=True):
+    zero = 0
     improvements_intrinsic = []
     improvements_extrinsic = []
     dataset = load_corrected_hats()
     for dictionary in dataset:
         semdist_score = float(dictionary["semdist"])
         bertscore_score = float(dictionary["bertscore"])
+        if semdist_score == 0 or bertscore_score == 0:
+            print(dictionary["reference"], dictionary["hyp"])
+            print(semdist_score, bertscore_score)
+            zero += 1
+            if not soustraction:
+                continue
         for correction in dictionary["corrections"]:
             semdist_correction = float(correction[-2])
             bertscore_correction = float(correction[-1])
-            improvement_intrinsic = semdist_correction/semdist_score*100 - 100
-            improvement_extrinsic = bertscore_correction/bertscore_score*100 - 100
+            if soustraction:
+                improvement_intrinsic = semdist_score - semdist_correction
+                improvement_extrinsic = bertscore_score - bertscore_correction
+            else:
+                improvement_intrinsic = semdist_correction/semdist_score*100 - 100
+                improvement_extrinsic = bertscore_correction/bertscore_score*100 - 100
             improvements_intrinsic.append(improvement_intrinsic)
             improvements_extrinsic.append(improvement_extrinsic)
+    print("Number of times the traduction was correct despite trascription errors:", zero, "out of", len(dataset), "times.")
     return improvements_intrinsic, improvements_extrinsic
 
 
