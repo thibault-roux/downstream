@@ -261,4 +261,4 @@ if __name__ == '__main__':
     # correct_and_save()
     # dataset = load_corrected_hats()
     # load_only_improvements()
-    # compute_correlation_minED_extrinsic()
+    compute_correlation_minED_extrinsic()
