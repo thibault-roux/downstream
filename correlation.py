@@ -196,7 +196,52 @@ def load_corrected_hats():
             for i in range(6, len(line)):
                 dictionary["corrections"].append(line[i].split(","))
             dataset.append(dictionary)
+    print(dataset[0])
     return dataset
+
+def repair_corrected_dataset():
+    import jiwer
+    # load the dataset and repair it by selecting only float numbers
+    with open("datasets/hats_with_corrections.txt", "r", encoding="utf8") as file:
+        txt = ""
+        nbrError = 0
+        commaInref = 0
+        for line in file:
+            linesplit = line[:-1].split("\t")
+            ref = linesplit[0]
+            if "," in ref:
+                commaInref += 1
+            corrections = linesplit[6:]
+            for quadruple in corrections:
+                if len(quadruple.split(",")) != 4:
+                    # print(line)
+                    #input()
+                    # print(quadruple)
+                    nbrError += 1
+        print("nbrError:", nbrError)
+        print("commaInref:", commaInref)
+        # should check if there is a comma in references
+        # I can keep the first as a real comma and the one preceding numbers?
+        # also check if there are numbers in the references or hypotheses?
+
+def load_only_improvements():
+    improvements_intrinsic = []
+    improvements_extrinsic = []
+    dataset = load_corrected_hats()
+    for dictionary in dataset:
+        print()
+        print(dictionary)
+        semdist_score = float(dictionary["semdist"])
+        bertscore_score = float(dictionary["bertscore"])
+        for correction in dictionary["corrections"]:
+            semdist_correction = float(correction[2])
+            bertscore_correction = float(correction[3])
+            improvements_intrinsic.append(semdist_score-semdist_correction)
+            improvements_extrinsic.append(bertscore_score-bertscore_correction)
+            print(semdist_score-semdist_correction, bertscore_score-bertscore_correction)
+        input()
+    return improvements_intrinsic, improvements_extrinsic
+
 
 if __name__ == '__main__':
     
@@ -205,6 +250,8 @@ if __name__ == '__main__':
     # save_semdist_bertscore(verbose=False)
     # compute_correlation_intrinsic_extrinsic()
     # correct_and_save()
-    dataset = load_corrected_hats()
-    print(dataset[0])
+    # dataset = load_corrected_hats()
+    repair_corrected_dataset()
+    exit()
+    load_only_improvements()
     # compute_correlation_minED_extrinsic()
