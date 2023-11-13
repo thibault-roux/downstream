@@ -254,7 +254,7 @@ def load_only_improvements(soustraction=True):
     return improvements_intrinsic, improvements_extrinsic
 
 
-def compute_correlation_minED_extrinsic():
+def correlation_minED_extrinsic():
     # compute correlation between the minimum edit distance and the extrinsic metric
     improvements_intrinsic, improvements_extrinsic = load_only_improvements()
     from scipy.stats import pearsonr
@@ -294,12 +294,10 @@ def load_list_improvements(soustraction=True):
     return improvements_intrinsic, improvements_extrinsic
 
 
-def compute_correlation_minED_extrinsic_local():
+def correlation_minED_extrinsic_local():
     # compute correlation between the minimum edit distance and the extrinsic metric
     from scipy.stats import pearsonr
     from scipy.stats import spearmanr
-    # print("pearson:", pearsonr(improvements_intrinsic, improvements_extrinsic))
-    # print("spearman:", spearmanr(improvements_intrinsic, improvements_extrinsic))
 
     skipped = 0
 
@@ -319,18 +317,49 @@ def compute_correlation_minED_extrinsic_local():
         if pearson[0] != pearson[0] or spearman[0] != spearman[0] or spearman[1] != spearman[1]:
             skipped += 1
         else:
-            pearsons.append(pearson[0])
-            spearmans.append(spearman[0])
+            if pearson[1] > 0.05 or spearman[1] > 0.05:
+                skipped += 1
+            else:
+                pearsons.append(pearson[0])
+                spearmans.append(spearman[0])
 
-            pvalue_pearsons.append(pearson[1])
-            pvalue_spearmans.append(spearman[1])
-
+                pvalue_pearsons.append(pearson[1])
+                pvalue_spearmans.append(spearman[1])
 
     print("skipped:", skipped)
     
     print("pearson:", sum(pearsons)/len(pearsons), "pvalue:", sum(pvalue_pearsons)/len(pvalue_pearsons))
     print("spearman:", sum(spearmans)/len(spearmans), "pvalue:", sum(pvalue_spearmans)/len(pvalue_spearmans))
 
+
+def correlation_best():
+    # compute the number of times the intrisic metric agree to determine the best correction
+
+    improvements_intrinsic, improvements_extrinsic = load_list_improvements()
+
+    best_agree = 0
+    disagree = 0
+    for i in range(len(improvements_intrinsic)):
+        if len(improvements_intrinsic[i]) < 2:
+            continue
+        
+        # compute rank of intrinsic and extrinsic list
+        intrinsic_rank = []
+        extrinsic_rank = []
+        for j in range(len(improvements_intrinsic[i])):
+            intrinsic_rank.append((j, improvements_intrinsic[i][j]))
+            extrinsic_rank.append((j, improvements_extrinsic[i][j]))
+        intrinsic_rank.sort(key=lambda x: x[1])
+        extrinsic_rank.sort(key=lambda x: x[1])
+
+        # check if the best correction is the same for intrinsic and extrinsic metrics
+        if intrinsic_rank[0][0] == extrinsic_rank[0][0]:
+            best_agree += 1
+        else:
+            disagree += 1
+
+    print("best_agree:", best_agree, "out of", len(improvements_intrinsic), "times.")
+    print("disagree:", disagree, "out of", len(improvements_intrinsic), "times.")
 
 if __name__ == '__main__':
     
@@ -342,4 +371,4 @@ if __name__ == '__main__':
     # dataset = load_corrected_hats()
     # load_only_improvements()
     # compute_correlation_minED_extrinsic()
-    compute_correlation_minED_extrinsic_local()
+    correlation_minED_extrinsic_local()
