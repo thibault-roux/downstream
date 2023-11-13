@@ -196,7 +196,6 @@ def load_corrected_hats():
             for i in range(6, len(line)):
                 dictionary["corrections"].append(line[i].split(","))
             dataset.append(dictionary)
-    print(dataset[0])
     return dataset
 
 def repair_corrected_dataset(): # does not work because it is not easy to find where the comma are really
@@ -237,8 +236,6 @@ def load_only_improvements(soustraction=True):
         semdist_score = float(dictionary["semdist"])
         bertscore_score = float(dictionary["bertscore"])
         if semdist_score == 0 or bertscore_score == 0:
-            print(dictionary["reference"], dictionary["hyp"])
-            print(semdist_score, bertscore_score)
             zero += 1
             if not soustraction:
                 continue
@@ -253,7 +250,7 @@ def load_only_improvements(soustraction=True):
                 improvement_extrinsic = bertscore_correction/bertscore_score*100 - 100
             improvements_intrinsic.append(improvement_intrinsic)
             improvements_extrinsic.append(improvement_extrinsic)
-    print("Number of times the traduction was correct despite trascription errors:", zero, "out of", len(dataset), "times.")
+    print("Correct traductions despite trascription errors:", zero, "out of", len(dataset), "times.")
     return improvements_intrinsic, improvements_extrinsic
 
 
@@ -266,6 +263,46 @@ def compute_correlation_minED_extrinsic():
     print("spearman:", spearmanr(improvements_intrinsic, improvements_extrinsic))
 
 
+def load_list_improvements(soustraction=True):
+    zero = 0
+    improvements_intrinsic = []
+    improvements_extrinsic = []
+    dataset = load_corrected_hats()
+    for dictionary in dataset:
+        improvements_local_intrinsic = []
+        improvements_local_extrinsic = []
+        semdist_score = float(dictionary["semdist"])
+        bertscore_score = float(dictionary["bertscore"])
+        if semdist_score == 0 or bertscore_score == 0:
+            zero += 1
+            if not soustraction:
+                continue
+        for correction in dictionary["corrections"]:
+            semdist_correction = float(correction[-2])
+            bertscore_correction = float(correction[-1])
+            if soustraction:
+                improvement_intrinsic = semdist_score - semdist_correction
+                improvement_extrinsic = bertscore_score - bertscore_correction
+            else:
+                improvement_intrinsic = semdist_correction/semdist_score*100 - 100
+                improvement_extrinsic = bertscore_correction/bertscore_score*100 - 100
+            improvements_local_intrinsic.append(improvement_intrinsic)
+            improvements_local_extrinsic.append(improvement_extrinsic)
+        improvements_intrinsic.append(improvements_local_intrinsic)
+        improvements_extrinsic.append(improvements_local_extrinsic)
+    print("Correct traductions despite trascription errors:", zero, "out of", len(dataset), "times.")
+    return improvements_intrinsic, improvements_extrinsic
+
+
+# def compute_correlation_minED_extrinsic():
+#     # compute correlation between the minimum edit distance and the extrinsic metric
+#     improvements_intrinsic, improvements_extrinsic = load_only_improvements()
+#     from scipy.stats import pearsonr
+#     print("pearson:", pearsonr(improvements_intrinsic, improvements_extrinsic))
+#     from scipy.stats import spearmanr
+#     print("spearman:", spearmanr(improvements_intrinsic, improvements_extrinsic))
+
+
 if __name__ == '__main__':
     
     # dataset = read_hats()
@@ -275,4 +312,8 @@ if __name__ == '__main__':
     # correct_and_save()
     # dataset = load_corrected_hats()
     # load_only_improvements()
-    compute_correlation_minED_extrinsic()
+    # compute_correlation_minED_extrinsic()
+    intr, extr = load_list_improvements()
+    for i in range(len(intr)):
+        print(intr[i], extr[i])
+        input()
