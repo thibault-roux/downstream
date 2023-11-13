@@ -1,5 +1,6 @@
 from deep_translator import GoogleTranslator as Translator
 import progressbar
+import random
 
 from utils.utils import corrector
 
@@ -294,7 +295,7 @@ def load_list_improvements(soustraction=True):
     return improvements_intrinsic, improvements_extrinsic
 
 
-def correlation_minED_extrinsic_local():
+def correlation_minED_extrinsic_local(Random=False):
     # compute correlation between the minimum edit distance and the extrinsic metric
     from scipy.stats import pearsonr
     from scipy.stats import spearmanr
@@ -310,6 +311,12 @@ def correlation_minED_extrinsic_local():
     for i in range(len(improvements_intrinsic)):
         if len(improvements_intrinsic[i]) < 2:
             continue
+
+        if Random:
+            # erase list with a list of random uniform numbers
+            improvements_intrinsic[i] = [random.uniform(0, 1) for _ in range(len(improvements_intrinsic[i]))]
+            improvements_extrinsic[i] = [random.uniform(0, 1) for _ in range(len(improvements_extrinsic[i]))]
+
         pearson = pearsonr(improvements_intrinsic[i], improvements_extrinsic[i])
         spearman = spearmanr(improvements_intrinsic[i], improvements_extrinsic[i])
 
@@ -326,13 +333,15 @@ def correlation_minED_extrinsic_local():
                 pvalue_pearsons.append(pearson[1])
                 pvalue_spearmans.append(spearman[1])
 
-    print("skipped:", skipped)
+    # print("skipped:", skipped)
     
-    print("pearson:", sum(pearsons)/len(pearsons), "pvalue:", sum(pvalue_pearsons)/len(pvalue_pearsons))
-    print("spearman:", sum(spearmans)/len(spearmans), "pvalue:", sum(pvalue_spearmans)/len(pvalue_spearmans))
+    # print("pearson:", sum(pearsons)/len(pearsons), "pvalue:", sum(pvalue_pearsons)/len(pvalue_pearsons))
+    # print("spearman:", sum(spearmans)/len(spearmans), "pvalue:", sum(pvalue_spearmans)/len(pvalue_spearmans))
+
+    return sum(pearsons)/len(pearsons), sum(spearmans)/len(spearmans)
 
 
-def correlation_best():
+def correlation_best(Random=False):
     # compute the number of times the intrisic metric agree to determine the best correction
 
     improvements_intrinsic, improvements_extrinsic = load_list_improvements()
@@ -345,6 +354,10 @@ def correlation_best():
             skipped += 1
             continue
 
+        if Random:
+            # erase list with a list of random uniform numbers
+            improvements_intrinsic[i] = [random.uniform(0, 1) for _ in range(len(improvements_intrinsic[i]))]
+            improvements_extrinsic[i] = [random.uniform(0, 1) for _ in range(len(improvements_extrinsic[i]))]
         
         # compute rank of intrinsic and extrinsic list
         intrinsic_rank = []
@@ -362,11 +375,10 @@ def correlation_best():
             disagree += 1
 
     print("skipped:", skipped, "out of", len(improvements_intrinsic), "times.")
-    print("best_agree:", best_agree, "out of", len(improvements_intrinsic), "times.")
-    print("disagree:", disagree, "out of", len(improvements_intrinsic), "times.")
+    print("best_agree:", best_agree, "out of", len(improvements_intrinsic), "times aka", best_agree/(len(improvements_intrinsic)-skipped)*100, "%")
+    print("disagree:", disagree, "out of", len(improvements_intrinsic), "times.", disagree/(len(improvements_intrinsic)-skipped)*100, "%")
 
-    # 1/3 + 1/1000 + 1/2 ~ 3/1005
-    # 2/3 + 500/1000 + 2/2
+    return best_agree/(len(improvements_intrinsic)-skipped)*100
 
 if __name__ == '__main__':
     
@@ -379,4 +391,22 @@ if __name__ == '__main__':
     # load_only_improvements()
     # compute_correlation_minED_extrinsic()
     # correlation_minED_extrinsic_local()
-    correlation_best()
+    
+    random_pearsons = []
+    random_spearmans = []
+    for i in range(20):
+        print(i)
+        pearson, spearman = correlation_minED_extrinsic_local(Random=True)
+        random_pearsons.append(pearson)
+        random_spearmans.append(spearman)
+    print(sum(random_pearsons)/len(random_pearsons))
+    print(sum(random_spearmans)/len(random_spearmans))
+    
+    exit(-1)
+    
+    # random test
+    random_scores = []
+    for i in range(300):
+        print(i)
+        random_scores.append(correlation_best(Random=True))
+    print(sum(random_scores)/len(random_scores))
