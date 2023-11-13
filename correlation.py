@@ -301,17 +301,33 @@ def compute_correlation_minED_extrinsic_local():
     # print("pearson:", pearsonr(improvements_intrinsic, improvements_extrinsic))
     # print("spearman:", spearmanr(improvements_intrinsic, improvements_extrinsic))
 
+    traduction_correct = 0
+
     improvements_intrinsic, improvements_extrinsic = load_list_improvements()
     pearsons = []
     spearmans = []
+    pvalue_pearsons = []
+    pvalue_spearmans = []
     for i in range(len(improvements_intrinsic)):
+        if len(improvements_intrinsic[i]) < 2:
+            continue
         pearson = pearsonr(improvements_intrinsic[i], improvements_extrinsic[i])
-        spearman = append(spearmanr(improvements_intrinsic[i], improvements_extrinsic[i])
+        spearman = spearmanr(improvements_intrinsic[i], improvements_extrinsic[i])
 
-        pearsons.append(pearson)
-        spearmans.append(spearman)
-    print("pearson:", sum(pearsons)/len(pearsons))
-    print("spearman:", sum(spearmans)/len(spearmans
+        # check if pearson and spearman are nan
+        if pearson[0] != pearson[0] or spearman[0] != spearman[0]:
+            traduction_correct += 1 # there is no improvement, meaning that the traduction was correct right from the beginning
+        else:
+            pearsons.append(pearson[0])
+            spearmans.append(spearman[0])
+
+            pvalue_pearsons.append(pearson[1])
+            pvalue_spearmans.append(spearman[1])
+
+    print("Correct traductions despite trascription errors:", traduction_correct, "out of", len(improvements_intrinsic), "times.")
+    
+    print("pearson:", sum(pearsons)/len(pearsons), "pvalue:", sum(pvalue_pearsons)/len(pvalue_pearsons))
+    print("spearman:", sum(spearmans)/len(spearmans), "pvalue:", sum(pvalue_spearmans)/len(pvalue_spearmans))
 
 
 if __name__ == '__main__':
