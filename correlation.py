@@ -295,7 +295,7 @@ def load_list_improvements(soustraction=True):
     return improvements_intrinsic, improvements_extrinsic
 
 
-def correlation_minED_extrinsic_local(Random=False):
+def correlation_minED_extrinsic_local(signif=0.05, Random=False):
     # compute correlation between the minimum edit distance and the extrinsic metric
     from scipy.stats import pearsonr
     from scipy.stats import spearmanr
@@ -324,7 +324,7 @@ def correlation_minED_extrinsic_local(Random=False):
         if pearson[0] != pearson[0] or spearman[0] != spearman[0] or spearman[1] != spearman[1]:
             skipped += 1
         else:
-            if pearson[1] > 0.05 or spearman[1] > 0.05:
+            if pearson[1] > signif or spearman[1] > signif: # significativity if pvalue > 0.05
                 skipped += 1
             else:
                 pearsons.append(pearson[0])
@@ -392,21 +392,49 @@ if __name__ == '__main__':
     # compute_correlation_minED_extrinsic()
     # correlation_minED_extrinsic_local()
     
+   
+    
+    # random test
+    random_scores = []
+    for i in range(1):
+        print(i)
+        random_scores.append(correlation_best(Random=False))
+    print(sum(random_scores)/len(random_scores))
+
+    exit(-1)
+    
     random_pearsons = []
     random_spearmans = []
     for i in range(20):
         print(i)
-        pearson, spearman = correlation_minED_extrinsic_local(Random=True)
+        pearson, spearman = correlation_minED_extrinsic_local(signif=0.10, Random=True)
         random_pearsons.append(pearson)
         random_spearmans.append(spearman)
     print(sum(random_pearsons)/len(random_pearsons))
     print(sum(random_spearmans)/len(random_spearmans))
     
-    exit(-1)
     
-    # random test
-    random_scores = []
-    for i in range(300):
-        print(i)
-        random_scores.append(correlation_best(Random=True))
-    print(sum(random_scores)/len(random_scores))
+
+
+
+
+# a: rank of correct solution
+# b: number of elements
+def metric(a, b):
+	return 1-(a-1)/(b-1)
+
+
+def test():
+	args = [(1,2), (2,2), (2,100), (98,100), (50,100), (2,4), (4,4)]
+	answ = [1, 0, 0.98, 0.02, 0.5, 0.5, 0]
+	# args = [(80,100), (20,21), (10,20), (22,33), (1,10), (2,10)]
+	# answ = [0.2, 0.05, 0.5, 0.33, 1, 0.9]
+	# args = [(50000000,100000000)]
+	# answ = [0.5]
+	
+	for i in range(len(args)):
+		a = args[i][0]
+		b = args[i][1]
+		answer = metric(a, b)
+		print(str(a) + "/" + str(b) + " = " + str(answer) + " (real answer == " + str(answ[i]) + ")")
+      
