@@ -255,13 +255,24 @@ def load_only_improvements(soustraction=True):
     return improvements_intrinsic, improvements_extrinsic
 
 
-def correlation_minED_extrinsic():
+def correlation_minED_extrinsic(Random=False):
     # compute correlation between the minimum edit distance and the extrinsic metric
     improvements_intrinsic, improvements_extrinsic = load_only_improvements()
+
+    if Random:
+        for i in range(len(improvements_intrinsic)):
+            # erase list with a list of random uniform numbers
+            improvements_intrinsic[i] = random.uniform(0, 1)
+            improvements_extrinsic[i] = random.uniform(0, 1)
+    
     from scipy.stats import pearsonr
-    print("pearson:", pearsonr(improvements_intrinsic, improvements_extrinsic))
+    pearson = pearsonr(improvements_intrinsic, improvements_extrinsic)
+    print("pearson:", pearson)
     from scipy.stats import spearmanr
-    print("spearman:", spearmanr(improvements_intrinsic, improvements_extrinsic))
+    spearman = spearmanr(improvements_intrinsic, improvements_extrinsic)
+    print("spearman:", spearman)
+    print(type(pearson[0]), type(spearman[0]))
+    return pearson[0], spearman[0]
 
 
 def load_list_improvements(soustraction=True):
@@ -380,6 +391,48 @@ def correlation_best(Random=False):
 
     return best_agree/(len(improvements_intrinsic)-skipped)*100
 
+
+
+def correlation_ANR(Random=False):
+    # compute the Average Normalized Rank
+    improvements_intrinsic, improvements_extrinsic = load_list_improvements()
+    skipped = 0
+    for i in range(len(improvements_intrinsic)):
+        if len(improvements_intrinsic[i]) < 2:
+            skipped += 1
+            continue
+        if Random:
+            # erase list with a list of random uniform numbers
+            improvements_intrinsic[i] = [random.uniform(0, 1) for _ in range(len(improvements_intrinsic[i]))]
+            improvements_extrinsic[i] = [random.uniform(0, 1) for _ in range(len(improvements_extrinsic[i]))]
+        improvements_intrinsic[i] = [111, 333, 222, 1]
+        improvements_extrinsic[i] = [10, 30, 20, 0] # ANR = 1 # for some reason, this does not work
+        # improvements_extrinsic[i] = [10, 0, 30, 20] # ANR = 0
+        # improvements_extrinsic[i] = [10, 20, 30, 0] # ANR = 0,66 ?
+        
+        # find index of the best intrinsic improvement
+        index_best_intrinsic = improvements_intrinsic[i].index(max(improvements_intrinsic[i]))
+        sorted_indices = sorted(range(len(improvements_extrinsic[i])), key=lambda k: improvements_extrinsic[i][k], reverse=True)
+        rank = sorted_indices[index_best_intrinsic]
+        print("index_best_intrinsic:", index_best_intrinsic) # correct
+        print("sorted_indices:", sorted_indices) # correct
+        print("rank:", rank) # correct
+
+        print()
+
+        a = rank+1
+        b = len(improvements_extrinsic[i])
+        
+        ANR = 1-(a-1)/(b-1)
+        print(str(a) + "/" + str(b) + " = " + str(ANR))
+        input()
+
+    print("skipped:", skipped, "out of", len(improvements_intrinsic), "times.")
+
+    # return best_agree/(len(improvements_intrinsic)-skipped)*100
+
+
+
 if __name__ == '__main__':
     
     # dataset = read_hats()
@@ -392,6 +445,24 @@ if __name__ == '__main__':
     # compute_correlation_minED_extrinsic()
     # correlation_minED_extrinsic_local()
     
+
+    correlation_ANR()
+
+    exit(-1)
+
+    # random test
+    random_pearsons = []
+    random_spearmans = []
+    for i in range(100):
+        print(i)
+        pearson, spearman = correlation_minED_extrinsic(Random=True)
+        random_pearsons.append(pearson)
+        random_spearmans.append(spearman)
+    print(sum(random_pearsons)/len(random_pearsons))
+    print(sum(random_spearmans)/len(random_spearmans))
+    
+
+    exit(-1)
    
     
     # random test
