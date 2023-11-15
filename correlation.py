@@ -395,18 +395,17 @@ def correlation_best(Random=False):
 
 def correlation_ANR(Random=False):
     # compute the Average Normalized Rank
-    anr = []
+    anrs = []
     improvements_intrinsic, improvements_extrinsic = load_list_improvements()
     skipped = 0
     for i in range(len(improvements_intrinsic)):
-        if len(improvements_intrinsic[i]) < 2:
+        if len(improvements_intrinsic[i]) < 5:
             skipped += 1
             continue
         if Random:
             # erase list with a list of random uniform numbers
             improvements_intrinsic[i] = [random.uniform(0, 1) for _ in range(len(improvements_intrinsic[i]))]
             improvements_extrinsic[i] = [random.uniform(0, 1) for _ in range(len(improvements_extrinsic[i]))]
-        improvements_intrinsic[i] = [111, 333, 222, 1]
 
         # find index of the best intrinsic improvement
         index_best_intrinsic = improvements_intrinsic[i].index(max(improvements_intrinsic[i]))
@@ -417,10 +416,32 @@ def correlation_ANR(Random=False):
         b = len(improvements_extrinsic[i])
         
         ANR = 1-(a-1)/(b-1)
-        anr.append(ANR)
-
+        anrs.append(ANR)
+        
     print("skipped:", skipped, "out of", len(improvements_intrinsic), "times.")
-    return sum(anr)/len(anr)
+    return sum(anrs)/len(anrs)
+
+
+
+# a: rank of correct solution
+# b: number of elements
+def metric(a, b):
+	return 1-(a-1)/(b-1)
+
+
+def test():
+	args = [(1,2), (2,2), (2,100), (98,100), (50,100), (2,4), (4,4), (2,3), (3,4), (4,5)]
+	answ = [1, 0, 0.98, 0.02, 0.5, 0.5, 0, 0.3, 0.2, 0.15]
+	# args = [(80,100), (20,21), (10,20), (22,33), (1,10), (2,10)]
+	# answ = [0.2, 0.05, 0.5, 0.33, 1, 0.9]
+	# args = [(50000000,100000000)]
+	# answ = [0.5]
+	
+	for i in range(len(args)):
+		a = args[i][0]
+		b = args[i][1]
+		answer = metric(a, b)
+		print(str(a) + "/" + str(b) + " = " + str(answer) + " (real answer == " + str(answ[i]) + ")")
 
 
 
@@ -435,9 +456,17 @@ if __name__ == '__main__':
     # load_only_improvements()
     # compute_correlation_minED_extrinsic()
     # correlation_minED_extrinsic_local()
-    
 
-    correlation_ANR()
+
+    # test()
+    # exit()
+
+    anrs = []
+    for i in range(100):
+        print(i)
+        anrs.append(correlation_ANR(Random=True))
+    print(sum(anrs)/len(anrs))
+
 
     exit(-1)
 
@@ -474,29 +503,3 @@ if __name__ == '__main__':
         random_spearmans.append(spearman)
     print(sum(random_pearsons)/len(random_pearsons))
     print(sum(random_spearmans)/len(random_spearmans))
-    
-    
-
-
-
-
-# a: rank of correct solution
-# b: number of elements
-def metric(a, b):
-	return 1-(a-1)/(b-1)
-
-
-def test():
-	args = [(1,2), (2,2), (2,100), (98,100), (50,100), (2,4), (4,4)]
-	answ = [1, 0, 0.98, 0.02, 0.5, 0.5, 0]
-	# args = [(80,100), (20,21), (10,20), (22,33), (1,10), (2,10)]
-	# answ = [0.2, 0.05, 0.5, 0.33, 1, 0.9]
-	# args = [(50000000,100000000)]
-	# answ = [0.5]
-	
-	for i in range(len(args)):
-		a = args[i][0]
-		b = args[i][1]
-		answer = metric(a, b)
-		print(str(a) + "/" + str(b) + " = " + str(answer) + " (real answer == " + str(answ[i]) + ")")
-      
