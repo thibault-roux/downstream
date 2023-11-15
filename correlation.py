@@ -395,6 +395,7 @@ def correlation_best(Random=False):
 
 def correlation_ANR(Random=False):
     # compute the Average Normalized Rank
+    anr = []
     improvements_intrinsic, improvements_extrinsic = load_list_improvements()
     skipped = 0
     for i in range(len(improvements_intrinsic)):
@@ -406,30 +407,20 @@ def correlation_ANR(Random=False):
             improvements_intrinsic[i] = [random.uniform(0, 1) for _ in range(len(improvements_intrinsic[i]))]
             improvements_extrinsic[i] = [random.uniform(0, 1) for _ in range(len(improvements_extrinsic[i]))]
         improvements_intrinsic[i] = [111, 333, 222, 1]
-        improvements_extrinsic[i] = [10, 30, 20, 0] # ANR = 1 # for some reason, this does not work
-        # improvements_extrinsic[i] = [10, 0, 30, 20] # ANR = 0
-        # improvements_extrinsic[i] = [10, 20, 30, 0] # ANR = 0,66 ?
-        
+
         # find index of the best intrinsic improvement
         index_best_intrinsic = improvements_intrinsic[i].index(max(improvements_intrinsic[i]))
-        sorted_indices = sorted(range(len(improvements_extrinsic[i])), key=lambda k: improvements_extrinsic[i][k], reverse=True)
-        rank = sorted_indices[index_best_intrinsic]
-        print("index_best_intrinsic:", index_best_intrinsic) # correct
-        print("sorted_indices:", sorted_indices) # correct
-        print("rank:", rank) # correct
-
-        print()
+        sorted_list = sorted(improvements_extrinsic[i], reverse=True)
+        rank = sorted_list.index(improvements_extrinsic[i][index_best_intrinsic])
 
         a = rank+1
         b = len(improvements_extrinsic[i])
         
         ANR = 1-(a-1)/(b-1)
-        print(str(a) + "/" + str(b) + " = " + str(ANR))
-        input()
+        anr.append(ANR)
 
     print("skipped:", skipped, "out of", len(improvements_intrinsic), "times.")
-
-    # return best_agree/(len(improvements_intrinsic)-skipped)*100
+    return sum(anr)/len(anr)
 
 
 
