@@ -21,6 +21,16 @@ def difference_wer(ref, hyp):
     return jiwer.wer(ref, hyp)*len(ref.split(" "))
 
 
+def get_base_errors(ref, hyp):
+    errors, distance = utils.awer(ref.split(" "), hyp.split(" "))
+    base_errors = ''.join(errors)
+    return base_errors
+
+def generate_hyp(ref, hypA, hypB, base_errors_A, base_errors_B):
+    # base_errors = base_errors_A + base_errors_B
+    pass
+            
+
 def save_filtered_hats(): # filter data to keep only hypothesis where there is a only two different words
     dataset = read_hats()
     filtered_dataset = []
@@ -43,19 +53,29 @@ def save_filtered_hats(): # filter data to keep only hypothesis where there is a
         # properties :
         #   - a ancestor can only have more errors than his children
         #   - children must have two errors not in common
-        if difference_wer(hypA, hypB) == 2 and difference_wer(ref, hypA) == 1 and difference_wer(ref, hypB) == 1:
-            filtered_dataset.append(dictionary)
-            # we have to create a basis hypothesis which have both errors from hypA and hypB
-            hyp = "salut tu va viens"
-            # input()
-        elif difference_wer(hypA, hypB) == 1: # there is an error made on the same word
-            filtered_dataset.append(dictionary)
+        # the hypothesis is generated according to hypotheses A and B and the reference
+        
+        ref = "salut tu vas bien"
+        hypA = "salut tu va bien"
+        hypB = "salut tu vas viens"
+        base_errors_A = get_base_errors(ref, hypA)
+        base_errors_B = get_base_errors(ref, hypB)
+        if jiwer.cer(base_errors_A, base_errors_B)*len(base_errors_A) == 2:
+            print(base_errors_A, base_errors_B)
             print(ref)
             print(hypA)
             print(hypB)
+            hyp = generate_hyp(ref, hypA, hypB, base_errors_A, base_errors_B)
+            print(hyp)
             input()
-            # we have to create a basis hypothesis which have 
-            # change the ref ??
+        # elif difference_wer(hypA, hypB) == 1: # there is an error made on the same word
+        #     filtered_dataset.append(dictionary)
+        #     print(ref)
+        #     print(hypA)
+        #     print(hypB)
+        #     input()
+        #     # we have to create a basis hypothesis which have 
+        #     # change the ref ??
     with open("datasets/filtered_hats.txt", "w", encoding="utf8") as file:
         file.write("reference\thypA\tnbrA\thypB\tnbrB\n")
         for dictionary in filtered_dataset:
@@ -64,11 +84,4 @@ def save_filtered_hats(): # filter data to keep only hypothesis where there is a
 
 
 if __name__ == "__main__":
-    ref = "salut tu vas bien"
-    hyp = "salut tu va bien"
-    errors, distance = utils.awer(ref.split(" "), hyp.split(" "))
-    base_errors = ''.join(errors)
-    print(base_errors)
-    exit()
-
-    # save_filtered_hats()
+    save_filtered_hats()
