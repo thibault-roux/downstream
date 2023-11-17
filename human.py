@@ -2,6 +2,7 @@ import jiwer
 import random
 import utils.utils as utils
 import progressbar
+from sklearn.metrics.pairwise import cosine_similarity
 
 def read_hats(path="datasets/hats.txt"):
     # dataset = [{"reference": ref, "hypA": hypA, "nbrA": nbrA, "hypB": hypB, "nbrB": nbrB}, ...]
@@ -108,7 +109,7 @@ def save_filtered_hats(): # filter data to keep only hypothesis where there is a
         file.write("reference\thyp\thypA\tnbrA\thypB\tnbrB\n")
         for dictionary in filtered_dataset:
             file.write(dictionary["ref"] + "\t" + dictionary["hyp"] + "\t" + dictionary["hypA"] + "\t" + str(dictionary["nbrA"]) + "\t" + dictionary["hypB"] + "\t" + str(dictionary["nbrB"]) + "\n")
-    print(len(filtered_dataset))
+    print(len(filtered_dataset)) # we have only 79 parent hypothesis found out of 237 triplets
 
 
 def read_filtered_hats(path="datasets/filtered_hats.txt"):
@@ -137,26 +138,82 @@ def semdist(ref, hyp, memory):
     return (1-score)*100 # lower is better
 
 def save_improvements():
+    # SemDist Sentence Camembert-large
+    from sentence_transformers import SentenceTransformer
+    semdist_model = SentenceTransformer('dangvantuan/sentence-camembert-large')
+
     # compute the semdist improvements of hypothesis A and B which are corrections of the hypothesis
     dataset = read_filtered_hats()
+    # progressbar
+    bar = progressbar.ProgressBar(maxval=len(dataset))
+    bar.start()
+    i = 0
     for dictionary in dataset:
+        bar.update(i)
+        i += 1
         ref = dictionary["ref"]
         hyp = dictionary["hyp"]
         hypA = dictionary["hypA"]
         hypB = dictionary["hypB"]
         nbrA = dictionary["nbrA"]
         nbrB = dictionary["nbrB"]
-        dictionary["refhyp"] = semdist(ref, hyp)
-        dictionary["refhypA"] = semdist(ref, hypA)
-        dictionary["refhypB"] = semdist(ref, hypB)
+        dictionary["refhyp"] = semdist(ref, hyp, semdist_model)
+        dictionary["refhypA"] = semdist(ref, hypA, semdist_model)
+        dictionary["refhypB"] = semdist(ref, hypB, semdist_model)
     # save dataset
     with open("datasets/filtered_hats_improvements.txt", "w", encoding="utf8") as file:
         file.write("reference\thyp\thypA\tnbrA\thypB\tnbrB\trefhyp\trefhypA\trefhypB\n")
         for dictionary in dataset:
             file.write(dictionary["ref"] + "\t" + dictionary["hyp"] + "\t" + dictionary["hypA"] + "\t" + str(dictionary["nbrA"]) + "\t" + dictionary["hypB"] + "\t" + str(dictionary["nbrB"]) + "\t" + str(dictionary["refhyp"]) + "\t" + str(dictionary["refhypA"]) + "\t" + str(dictionary["refhypB"]) + "\n")
 
-def correlation():
-    pass    
+
+def load_improvements(path="datasets/filtered_hats_improvements.txt"):
+    # dataset = [{"reference": ref, "hyp": hyp, "hypA": hypA, "nbrA": nbrA, "hypB": hypB, "nbrB": nbrB, "refhyp": refhyp, "refhypA": refhypA, "refhypB": refhypB}, ...]
+    dataset = []
+    with open(path, "r", encoding="utf8") as file:
+        next(file)
+        for line in file:
+            line = line[:-1].split("\t")
+            dictionary = dict()
+            dictionary["ref"] = line[0]
+            dictionary["hyp"] = line[1]
+            dictionary["hypA"] = line[2]
+            dictionary["nbrA"] = int(line[3])
+            dictionary["hypB"] = line[4]
+            dictionary["nbrB"] = int(line[5])
+            dictionary["refhyp"] = float(line[6])
+            dictionary["refhypA"] = float(line[7])
+            dictionary["refhypB"] = float(line[8])
+            dataset.append(dictionary)
+    return dataset
+
+def correlation(Random=False):
+    # compute the number of times humans agree with the improvement due to corrections
+    dataset = load_improvements()
+    agreement = 0
+    for dictionary in dataset:
+        if dictionary["nbrA"] < dictionary["nbrB"]:
+            humanWinA = True
+        else:
+            humanWinA = False
+        if Random:
+            dictionary["refhyp"] = random.uniform(0, 1)
+            dictionary["refhypA"] = random.uniform(0, 1)
+            dictionary["refhypB"] = random.uniform(0, 1)
+        scoreA = dictionary["refhyp"] - dictionary["refhypA"]
+        scoreB = dictionary["refhyp"] - dictionary["refhypB"]
+        if scoreA < scoreB:
+            metricWinA = True
+        else:
+            metricWinA = False
+        # increase agreement if both agree
+        if (humanWinA and metricWinA) or (not humanWinA and not metricWinA):
+            agreement += 1
+    print(agreement/len(dataset))
+
+
 
 if __name__ == "__main__":
-    save_filtered_hats()
+    # save_filtered_hats()
+    # save_improvements()
+    correlation(Random=False)
