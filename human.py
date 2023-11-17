@@ -26,48 +26,8 @@ def get_base_errors(ref, hyp):
     base_errors = ''.join(errors)
     return base_errors
 
-
-
-def check(ref, hypA, hypB):
-    # je pourrais avoir les erreurs de base et les comparer
-    # ref, hypA = seees
-    # ref, hypB = seese
-    # hypA, hypB = eeess
-    # check if the errors are the same
-
-    refhypA = get_base_errors(ref, hypA)
-    refhypB = get_base_errors(ref, hypB)
-    hypAhypB = get_base_errors(hypA, hypB)
-    # count the number of difference between hypA and hypB
-    differences = 0
-    for i in range(len(hypAhypB)):
-        if hypAhypB[i] != "e":
-            differences += 1
-    if diffences != 2:
-        return False
-    
-
-def check_base_errors(ref, hypA, hypB, base_errors_A, base_errors_B):
-    # if difference_wer(hypA, hypB) == 2:
-    
-    if jiwer.cer(base_errors_A, base_errors_B)*len(base_errors_A) == 2:
-        for i in range(len(base_errors_A)):
-            if base_errors_A[i] != base_errors_B[i]:
-                return True
-
-def generate_hyp(ref, hypA, hypB, base_errors_A, base_errors_B): # TRY TO THINK ABOUT ALIGNMENT
-    # I HAVE TROUBLE BECAUSE I WANT THE SAME ERROR, NOT JUST THE SAME KIND
-    #
-    # base_errors = base_errors_A + base_errors_B
-    if len(base_errors_A) != len(base_errors_B):
-        print(ref)
-        print(hypA)
-        print(hypB)
-        print(base_errors_A)
-        print(base_errors_B)
-        print("different length")
-        input()
-    return "TEMP"
+def alignment(ref, hypA, hypB):
+    pass
             
 
 def save_filtered_hats(): # filter data to keep only hypothesis where there is a only two different words
@@ -83,12 +43,8 @@ def save_filtered_hats(): # filter data to keep only hypothesis where there is a
         ref = "salut tu vas bien"
         hypA = "salut va vienss"
         hypB = "salut vass vienxs"
-        """
-        # second case
-        ref = "..."
-        hypA = "salut tu vas viens"
-        hypB = "salut tu vas biens"
-        """
+
+        # another option is to generate random ancestors until one is correct
 
         # what I need: two hypothesis with a common ancestor at one correction each
         # properties:
@@ -98,34 +54,33 @@ def save_filtered_hats(): # filter data to keep only hypothesis where there is a
         #   - the error in common must be the same, not only the same type (substition must be the same)
         # the hypothesis is generated according to hypotheses A and B and the reference
         
-        if difference_wer(hypA, hypB) == 2:
-            counter += 1
-            print(hypA)
-            print(hypB)
-            input()
-        """
-        # ref = "salut tu vas bien"
-        # hypA = "salut tu va bien"
-        # hypB = "salut tu vas viens"
-        base_errors_A = get_base_errors(ref, hypA)
-        base_errors_B = get_base_errors(ref, hypB)
-        if check_base_errors(ref, hypA, hypB, base_errors_A, base_errors_B):
-            # print(base_errors_A, base_errors_B)
-            # print(ref)
-            # print(hypA)
-            # print(hypB)
-            hyp = generate_hyp(ref, hypA, hypB, base_errors_A, base_errors_B)
-            # print(hyp)
-            # input()
-        # elif difference_wer(hypA, hypB) == 1: # there is an error made on the same word
-        #     filtered_dataset.append(dictionary)
-        #     print(ref)
-        #     print(hypA)
-        #     print(hypB)
-        #     input()
-        #     # we have to create a basis hypothesis which have 
-        #     # change the ref ??
-        """
+        # alignment
+        # ref_align, hypA_align, hypB_align = alignment(ref, hypA, hypB)
+
+        # ref <eps> salut tu vas bien car pas moi
+        # hyp euh salu tu NAN NAN car pa <eps>
+        # hypA <eps> salu tu vax sien car pa moi
+        # hypB euh salu tu va viens car pas <eps>
+        
+        ref_align = ["<eps>", "salut", "tu", "vas", "bien", "car", "pas", "moi"]
+        # hyp_align = ["euh", "salu", "tu", "NAN", "NAN", "car", "pa", "<eps>"]
+        hypA_align = ["<eps>", "salu", "tu", "vax", "sien", "car", "pa", "moi"]
+        hypB_align = ["euh", "salu", "tu", "va", "viens", "car", "pas", "<eps>"]
+        # generate hypothesis
+        hyp = ""
+        for i in range(len(ref_align)):
+            if hypA_align[i] == hypB_align[i]:
+                error = hypA_align[i]
+            else: # different
+                if ref_align[i] == hypA_align[i]:
+                    error = hypB_align[i]
+                elif ref_align[i] == hypB_align[i]:
+                    error = hypA_align[i]
+                else:
+                    break
+            # add error to hypothesis
+            # hyp += error + " "
+        
     print(counter)
     exit()
     with open("datasets/filtered_hats.txt", "w", encoding="utf8") as file:
