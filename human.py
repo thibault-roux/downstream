@@ -1,4 +1,5 @@
 import jiwer
+import random
 import utils.utils as utils
 
 def read_hats(path="datasets/hats.txt"):
@@ -17,17 +18,61 @@ def read_hats(path="datasets/hats.txt"):
             dataset.append(dictionary)
     return dataset
 
-def difference_wer(ref, hyp):
+
+def WE(ref, hyp):
     return jiwer.wer(ref, hyp)*len(ref.split(" "))
 
+def infer_hypothesis(ref, hypA, hypB):
+    # instead of fully generate the hypothesis, I could start from hypothesis A and B and generate a random ancestor
 
-def get_base_errors(ref, hyp):
-    errors, distance = utils.awer(ref.split(" "), hyp.split(" "))
-    base_errors = ''.join(errors)
-    return base_errors
+    vocabulary_save = []
+    for word in ref.split(" "):
+        vocabulary_save.append(word)
+    for word in hypA.split(" "):
+        vocabulary_save.append(word)
+    for word in hypB.split(" "):
+        vocabulary_save.append(word)
 
-def alignment(ref, hypA, hypB):
-    pass
+    hypAsplit = hypA.split(" ")
+    hypBsplit = hypB.split(" ")
+
+    limit = 0
+    while limit < 10000:
+        hyp = hypAsplit.copy()
+        # randomly delete a word, insert a word from vocabulary or substitute a word from vocabulary
+        # randomly choose an operation
+        operation = random.choice(["delete", "insert", "substitute"])
+        # randomly choose a position
+        position = random.randint(0, len(hyp)-1)
+        # instead of choosing a word from vocabulary, I could choose a word in the hypothesis which is close
+        # create a vocab with words from hypB[position-1], hypB[position], hypB[position+1]
+        vocab = []
+        if position > 0:
+            vocab.append(hypBsplit[position-1])
+        if position < len(hypBsplit):
+            vocab.append(hypBsplit[position])
+        if position < len(hypBsplit)-1:
+            vocab.append(hypBsplit[position+1])
+        # choose a word from vocab
+        word = random.choice(vocab)
+        # apply operation
+        if operation == "delete":
+            hyp.pop(position)
+        elif operation == "insert":
+            hyp.insert(position, word)
+        elif operation == "substitute":
+            hyp[position] = word
+        hyp = " ".join(hyp)
+        # check if it is correct
+        hyp_hypA = WE(hyp, hypA)
+        hyp_hypB = WE(hyp, hypB)
+        hyp_ref = WE(hyp, ref)
+        ref_hypA = WE(ref, hypA)
+        ref_hypB = WE(ref, hypB)
+        if hyp_hypA == 1 and hyp_hypB == 1 and ref_hypA + 1 == hyp_ref and ref_hypB + 1 == hyp_ref:
+            # print(limit)
+            return hyp
+        limit += 1
             
 
 def save_filtered_hats(): # filter data to keep only hypothesis where there is a only two different words
@@ -39,48 +84,11 @@ def save_filtered_hats(): # filter data to keep only hypothesis where there is a
         hypA = dictionary["hypA"] 
         hypB = dictionary["hypB"]
         
-        # first case
-        ref = "salut tu vas bien"
-        hypA = "salut va vienss"
-        hypB = "salut vass vienxs"
+        if WE(hypA, hypB) == 2:
+            hyp = infer_hypothesis(ref, hypA, hypB)
+            if hyp is not None:
+                counter += 1
 
-        # another option is to generate random ancestors until one is correct
-
-        # what I need: two hypothesis with a common ancestor at one correction each
-        # properties:
-        #   - an ancestor can only have more errors than his children
-        #   - children must have two errors not in common
-        #   - when an error is done, the other system must have it correct
-        #   - the error in common must be the same, not only the same type (substition must be the same)
-        # the hypothesis is generated according to hypotheses A and B and the reference
-        
-        # alignment
-        # ref_align, hypA_align, hypB_align = alignment(ref, hypA, hypB)
-
-        # ref <eps> salut tu vas bien car pas moi
-        # hyp euh salu tu NAN NAN car pa <eps>
-        # hypA <eps> salu tu vax sien car pa moi
-        # hypB euh salu tu va viens car pas <eps>
-        
-        ref_align = ["<eps>", "salut", "tu", "vas", "bien", "car", "pas", "moi"]
-        # hyp_align = ["euh", "salu", "tu", "NAN", "NAN", "car", "pa", "<eps>"]
-        hypA_align = ["<eps>", "salu", "tu", "vax", "sien", "car", "pa", "moi"]
-        hypB_align = ["euh", "salu", "tu", "va", "viens", "car", "pas", "<eps>"]
-        # generate hypothesis
-        hyp = ""
-        for i in range(len(ref_align)):
-            if hypA_align[i] == hypB_align[i]:
-                error = hypA_align[i]
-            else: # different
-                if ref_align[i] == hypA_align[i]:
-                    error = hypB_align[i]
-                elif ref_align[i] == hypB_align[i]:
-                    error = hypA_align[i]
-                else:
-                    break
-            # add error to hypothesis
-            # hyp += error + " "
-        
     print(counter)
     exit()
     with open("datasets/filtered_hats.txt", "w", encoding="utf8") as file:
