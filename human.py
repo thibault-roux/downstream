@@ -1,6 +1,7 @@
 import jiwer
 import random
 import utils.utils as utils
+import progressbar
 
 def read_hats(path="datasets/hats.txt"):
     # dataset = [{"reference": ref, "hypA": hypA, "nbrA": nbrA, "hypB": hypB, "nbrB": nbrB}, ...]
@@ -79,22 +80,30 @@ def save_filtered_hats(): # filter data to keep only hypothesis where there is a
     dataset = read_hats()
     filtered_dataset = []
     counter = 0
+    # progressbar
+    bar = progressbar.ProgressBar(maxval=len(dataset))
+    bar.start()
+    i = 0
     for dictionary in dataset:
+        bar.update(i)
+        i += 1
+        if i%50 == 0:
+            break
         ref = dictionary["ref"]
-        hypA = dictionary["hypA"] 
+        hypA = dictionary["hypA"]
         hypB = dictionary["hypB"]
         
         if WE(hypA, hypB) == 2:
             hyp = infer_hypothesis(ref, hypA, hypB)
             if hyp is not None:
                 counter += 1
+                filtered_dataset.append({"ref": ref, "hyp": hyp, "hypA": hypA, "nbrA": dictionary["nbrA"], "hypB": hypB, "nbrB": dictionary["nbrB"]})
 
     print(counter)
-    exit()
     with open("datasets/filtered_hats.txt", "w", encoding="utf8") as file:
-        file.write("reference\thypA\tnbrA\thypB\tnbrB\n")
+        file.write("reference\thyp\thypA\tnbrA\thypB\tnbrB\n")
         for dictionary in filtered_dataset:
-            file.write(dictionary["ref"] + "\t" + dictionary["hypA"] + "\t" + str(dictionary["nbrA"]) + "\t" + dictionary["hypB"] + "\t" + str(dictionary["nbrB"]) + "\n")
+            file.write(dictionary["ref"] + "\t" + dictionary["hyp"] + "\t" + dictionary["hypA"] + "\t" + str(dictionary["nbrA"]) + "\t" + dictionary["hypB"] + "\t" + str(dictionary["nbrB"]) + "\n")
     print(len(filtered_dataset))
 
 
