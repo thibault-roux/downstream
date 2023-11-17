@@ -48,12 +48,15 @@ def infer_hypothesis(ref, hypA, hypB):
         # instead of choosing a word from vocabulary, I could choose a word in the hypothesis which is close
         # create a vocab with words from hypB[position-1], hypB[position], hypB[position+1]
         vocab = []
-        if position > 0:
-            vocab.append(hypBsplit[position-1])
-        if position < len(hypBsplit):
-            vocab.append(hypBsplit[position])
-        if position < len(hypBsplit)-1:
-            vocab.append(hypBsplit[position+1])
+        try:
+            if position > 0:
+                vocab.append(hypBsplit[position-1])
+            if position < len(hypBsplit):
+                vocab.append(hypBsplit[position])
+            if position < len(hypBsplit)-1:
+                vocab.append(hypBsplit[position+1])
+        except IndexError:
+            return None
         # choose a word from vocab
         word = random.choice(vocab)
         # apply operation
@@ -65,11 +68,14 @@ def infer_hypothesis(ref, hypA, hypB):
             hyp[position] = word
         hyp = " ".join(hyp)
         # check if it is correct
-        hyp_hypA = WE(hyp, hypA)
-        hyp_hypB = WE(hyp, hypB)
-        hyp_ref = WE(hyp, ref)
-        ref_hypA = WE(ref, hypA)
-        ref_hypB = WE(ref, hypB)
+        try:
+            hyp_hypA = WE(hyp, hypA)
+            hyp_hypB = WE(hyp, hypB)
+            hyp_ref = WE(hyp, ref)
+            ref_hypA = WE(ref, hypA)
+            ref_hypB = WE(ref, hypB)
+        except ValueError:
+            return None
         if hyp_hypA == 1 and hyp_hypB == 1 and ref_hypA + 1 == hyp_ref and ref_hypB + 1 == hyp_ref:
             # print(limit)
             return hyp
@@ -87,8 +93,6 @@ def save_filtered_hats(): # filter data to keep only hypothesis where there is a
     for dictionary in dataset:
         bar.update(i)
         i += 1
-        if i%50 == 0:
-            break
         ref = dictionary["ref"]
         hypA = dictionary["hypA"]
         hypB = dictionary["hypB"]
@@ -106,6 +110,53 @@ def save_filtered_hats(): # filter data to keep only hypothesis where there is a
             file.write(dictionary["ref"] + "\t" + dictionary["hyp"] + "\t" + dictionary["hypA"] + "\t" + str(dictionary["nbrA"]) + "\t" + dictionary["hypB"] + "\t" + str(dictionary["nbrB"]) + "\n")
     print(len(filtered_dataset))
 
+
+def read_filtered_hats(path="datasets/filtered_hats.txt"):
+    # dataset = [{"reference": ref, "hyp": hyp, "hypA": hypA, "nbrA": nbrA, "hypB": hypB, "nbrB": nbrB}, ...]
+    dataset = []
+    with open(path, "r", encoding="utf8") as file:
+        next(file)
+        for line in file:
+            line = line[:-1].split("\t")
+            dictionary = dict()
+            dictionary["ref"] = line[0]
+            dictionary["hyp"] = line[1]
+            dictionary["hypA"] = line[2]
+            dictionary["nbrA"] = int(line[3])
+            dictionary["hypB"] = line[4]
+            dictionary["nbrB"] = int(line[5])
+            dataset.append(dictionary)
+    return dataset
+
+
+def semdist(ref, hyp, memory):
+    model = memory
+    ref_projection = model.encode(ref).reshape(1, -1)
+    hyp_projection = model.encode(hyp).reshape(1, -1)
+    score = cosine_similarity(ref_projection, hyp_projection)[0][0]
+    return (1-score)*100 # lower is better
+
+def save_improvements():
+    # compute the semdist improvements of hypothesis A and B which are corrections of the hypothesis
+    dataset = read_filtered_hats()
+    for dictionary in dataset:
+        ref = dictionary["ref"]
+        hyp = dictionary["hyp"]
+        hypA = dictionary["hypA"]
+        hypB = dictionary["hypB"]
+        nbrA = dictionary["nbrA"]
+        nbrB = dictionary["nbrB"]
+        dictionary["refhyp"] = semdist(ref, hyp)
+        dictionary["refhypA"] = semdist(ref, hypA)
+        dictionary["refhypB"] = semdist(ref, hypB)
+    # save dataset
+    with open("datasets/filtered_hats_improvements.txt", "w", encoding="utf8") as file:
+        file.write("reference\thyp\thypA\tnbrA\thypB\tnbrB\trefhyp\trefhypA\trefhypB\n")
+        for dictionary in dataset:
+            file.write(dictionary["ref"] + "\t" + dictionary["hyp"] + "\t" + dictionary["hypA"] + "\t" + str(dictionary["nbrA"]) + "\t" + dictionary["hypB"] + "\t" + str(dictionary["nbrB"]) + "\t" + str(dictionary["refhyp"]) + "\t" + str(dictionary["refhypA"]) + "\t" + str(dictionary["refhypB"]) + "\n")
+
+def correlation():
+    pass    
 
 if __name__ == "__main__":
     save_filtered_hats()
