@@ -81,7 +81,8 @@ def infer_hypothesis2(ref, hypA, hypB):
         vocab = []
         if position > 0:
             vocab.append(hypBsplit[position-1])
-        vocab.append(hypBsplit[position])
+        if position < len(hypBsplit):
+            vocab.append(hypBsplit[position])
         if position < len(hypBsplit)-1:
             vocab.append(hypBsplit[position+1])
         # choose a word from vocab
@@ -101,21 +102,63 @@ def infer_hypothesis2(ref, hypA, hypB):
         ref_hypA = WE(ref, hypA)
         ref_hypB = WE(ref, hypB)
         if hyp_hypA == 1 and hyp_hypB == 1 and ref_hypA + 1 == hyp_ref and ref_hypB + 1 == hyp_ref:
-            print(limit)
+            # print(limit)
             return hyp
         limit += 1
 
 
-if __name__ == "__main__":
-    ref = "salut tu vas bien"
-    hypA = "salu tu va bien ouais"
-    hypB = "salu tu vas viens ouais"
-    
-    # ref = "salut tu vas bien car pas moi"
-    # hypA = "salu tu vas sien car pa moi"
-    # hypB = "salu tu va sien car pas moi"
+def test():
+    refs = [
+        "salut tu vas bien",
+        "salut tu vas bien",
+        "salut tu vas bien",
+        "salut tu vas bien",
+        "salut tu vas bien",
+        "salut tu vas bien"
+    ]
+    hyps = [
+        "sa salut tu va viens",
+        "sa salut tu va bien",
+        "salut tu va",
+        "tu va bien",
+        "salut tue va viens",
+        "salut tue e va viens"
+    ]
+    hypsA = [
+        "sa salut tu va bien",
+        "sa salut tu vas bien",
+        "salut tu va bien",
+        "salut tu va bien",
+        "salut tue va bien",
+        "salut tue e va bien"
+    ]
+    hypsB = [
+        "sa salut tu vas viens",
+        "salut tu va bien",
+        "salut tu vas",
+        "tu vas bien",
+        "salut tue vas viens",
+        "salut tue e vas viens"
+    ]
 
-    # ref = "A B C D"
-    # hypA = "A B E D"
-    # hypB = "A B C F"
-    print(infer_hypothesis2(ref, hypA, hypB))
+    while True:
+        for i in range(len(refs)):
+            ref = refs[i]
+            hyp = hyps[i]
+            hypA = hypsA[i]
+            hypB = hypsB[i]
+            hyp_generated = infer_hypothesis2(ref, hypA, hypB)
+            if hyp != hyp_generated:
+                print("ERROR")
+                print("ref:", ref)
+                print("hypA:", hypA)
+                print("hypB:", hypB)
+                print("hyp:", hyp)
+                print("hyp_generated:", hyp_generated)
+                input()
+            else:
+                print("ok")
+
+
+if __name__ == "__main__":
+    test()
