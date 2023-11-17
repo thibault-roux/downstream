@@ -65,16 +65,27 @@ def infer_hypothesis2(ref, hypA, hypB):
     for word in hypB.split(" "):
         vocabulary_save.append(word)
 
+    hypAsplit = hypA.split(" ")
+    hypBsplit = hypB.split(" ")
+
     limit = 0
     while limit < 10000:
-        hyp = hypA.split(" ")
+        hyp = hypAsplit.copy()
         # randomly delete a word, insert a word from vocabulary or substitute a word from vocabulary
         # randomly choose an operation
         operation = random.choice(["delete", "insert", "substitute"])
-        # randomly choose a word from vocabulary
-        word = random.choice(vocabulary_save)
         # randomly choose a position
         position = random.randint(0, len(hyp)-1)
+        # instead of choosing a word from vocabulary, I could choose a word in the hypothesis which is close
+        # create a vocab with words from hypB[position-1], hypB[position], hypB[position+1]
+        vocab = []
+        if position > 0:
+            vocab.append(hypBsplit[position-1])
+        vocab.append(hypBsplit[position])
+        if position < len(hypBsplit)-1:
+            vocab.append(hypBsplit[position+1])
+        # choose a word from vocab
+        word = random.choice(vocab)
         # apply operation
         if operation == "delete":
             hyp.pop(position)
@@ -96,13 +107,13 @@ def infer_hypothesis2(ref, hypA, hypB):
 
 
 if __name__ == "__main__":
-    # ref = "salut tu vas bien"
-    # hypA = "salu tu va bien ouais"
-    # hypB = "salu tu vas viens ouais"
+    ref = "salut tu vas bien"
+    hypA = "salu tu va bien ouais"
+    hypB = "salu tu vas viens ouais"
     
-    ref = "salut tu vas bien car pas moi"
-    hypA = "salu tu vas sien car pa moi"
-    hypB = "salu tu va sien car pas moi"
+    # ref = "salut tu vas bien car pas moi"
+    # hypA = "salu tu vas sien car pa moi"
+    # hypB = "salu tu va sien car pas moi"
 
     # ref = "A B C D"
     # hypA = "A B E D"
