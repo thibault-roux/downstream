@@ -1,7 +1,6 @@
-
 from fairseq.checkpoint_utils import load_model_ensemble_and_task_from_hf_hub
 from fairseq.models.text_to_speech.hub_interface import TTSHubInterface
-import soundfile as sf
+from scipy.io.wavfile import write
 
 models, cfg, task = load_model_ensemble_and_task_from_hf_hub(
     "facebook/tts_transformer-fr-cv7_css10",
@@ -16,5 +15,5 @@ text = "Bonjour, ceci est un test."
 sample = TTSHubInterface.get_model_input(task, text)
 wav, rate = TTSHubInterface.get_prediction(task, model, generator, sample)
 
-# Sauvegarder le fichier audio
-sf.write("output.wav", wav, rate)
+# Save the audio file using scipy
+write("output.wav", rate, wav)
