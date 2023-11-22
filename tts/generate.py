@@ -1,19 +1,26 @@
-from fairseq.checkpoint_utils import load_model_ensemble_and_task_from_hf_hub
-from fairseq.models.text_to_speech.hub_interface import TTSHubInterface
-from scipy.io.wavfile import write
+from transformers import VitsModel, AutoTokenizer
+import torch
 
-models, cfg, task = load_model_ensemble_and_task_from_hf_hub(
-    "facebook/tts_transformer-fr-cv7_css10",
-    arg_overrides={"vocoder": "hifigan", "fp16": False}
-)
-model = models[0]
-TTSHubInterface.update_cfg_with_data_cfg(cfg, task.data_cfg)
-generator = task.build_generator(model, cfg)
+model = VitsModel.from_pretrained("facebook/mms-tts-fra")
+tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-fra")
 
-text = "Bonjour, ceci est un test."
+text = "salut tu vas bien"
+inputs = tokenizer(text, return_tensors="pt")
 
-sample = TTSHubInterface.get_model_input(task, text)
-wav, rate = TTSHubInterface.get_prediction(task, model, generator, sample)
+with torch.no_grad():
+    output = model(**inputs).waveform
 
-# Save the audio file using scipy
-write("output.wav", rate, wav)
+import scipy
+
+import numpy as np
+
+# Convert the PyTorch tensor to a NumPy array
+output_np = output.numpy()
+
+# Scale the values to the expected range for 16-bit PCM audio (usually between -32768 and 32767)
+output_np_scaled = np.int16(output_np * 32767)
+
+# Write the WAV file using the scaled NumPy array
+scipy.io.wavfile.write("techno.wav", rate=model.config.sampling_rate, data=output_np_scaled)
+
+# scipy.io.wavfile.write("techno.wav", rate=model.config.sampling_rate, data=output)
