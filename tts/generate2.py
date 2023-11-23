@@ -12,4 +12,4 @@ multiples_texts = ["salut tu vas bien", "oui tu vas bien", "c'est super mon ami"
 i = 0
 for text in multiples_texts:
     # Run TTS
-    tts.tts_to_file(text, speaker_wav="files" + str(i) + "/bfm.wav", language="fr", file_path="files/techno.wav")
+    tts.tts_to_file(text, speaker_wav="files/bfm" + str(i) + ".wav", language="fr", file_path="files/techno.wav")
