@@ -21,13 +21,18 @@ def load_model():
     # HuggingFace model hub
     model_hub_w2v2 = "LeBenchmark/wav2vec2-FR-7K-large"
     model_w2v2 = HuggingFaceWav2Vec2(model_hub_w2v2, save_path='./save')
-    # infer the features
-    features = model_w2v2.forward(waveform)
-    return features
+    return model_w2v2
+
+def cosine_similarity(x, y):
+    return torch.nn.CosineSimilarity(x, y)
 
 if __name__ == "__main__":
+    model_w2v2 = load_model()
+    waveform = load_wav("files/bfmtv0.wav")
+    features_base = model_w2v2.forward(waveform)
     for i in range(10):
         waveform = load_wav("files/bfmtv" + str(i) + ".wav")
-        features = load_model()
-        print(features.shape)
+        features = model_w2v2.forward(waveform)
+        cs = cosine_similarity(features_base, features)
+        print(cs)
 
