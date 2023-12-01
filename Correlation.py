@@ -255,7 +255,7 @@ def load_only_improvements(task, metric1, metric2, soustraction=True):
                 improvement_extrinsic = score2_correction/score2*100 - 100
             improvements_intrinsic.append(improvement_intrinsic)
             improvements_extrinsic.append(improvement_extrinsic)
-    print("Correct generations despite trascription errors:", zero, "out of", len(dataset), "times.")
+    # print("Correct generations despite transcription errors:", zero, "out of", len(dataset), "times.")
     return improvements_intrinsic, improvements_extrinsic
 
 
@@ -319,7 +319,7 @@ def load_list_improvements(task, metric1, metric2, soustraction=True):
             improvements_local_extrinsic.append(improvement_extrinsic)
         improvements_intrinsic.append(improvements_local_intrinsic)
         improvements_extrinsic.append(improvements_local_extrinsic)
-    # print("Correct generations despite trascription errors:", zero, "out of", len(dataset), "times.")
+    # print("Correct generations despite transcription errors:", zero, "out of", len(dataset), "times.")
     return improvements_intrinsic, improvements_extrinsic
 
 
@@ -429,11 +429,11 @@ def generate_all_data(task, metric1, metric2):
     print("Reading dataset...")
     dataset = read_hats()
     print("Generating intermediate data...")
-    intermediate_data(dataset, task)
+    intermediate_data(dataset, task, verbose=True)
     print("Computing metrics...")
-    compute_metrics(task, metric1, metric2, verbose=False)
+    compute_metrics(task, metric1, metric2, verbose=True)
     print("Correcting and saving...")
-    correct_and_save(task, metric1, metric2)
+    correct_and_save(task, metric1, metric2, verbose=True)
 
 
 def compute_all_correlations(task, metric1, metric2):
@@ -448,68 +448,47 @@ def read_results():
         next(file)
         for line in file:
             line = line[:-1].split(",")
-            results["Task"] = line[0]
-            results["Intrisinc Metric"] = line[1]
-            results["Extrinsic Metric"] = line[2]
-            results["Global Correlation Pearson"] = line[3]
-            results["Global Correlation Spearman"] = line[4]
-            results["Local Correlation Pearson"] = line[5]
-            results["Local Correlation Spearman"] = line[6]
-            results["Choice Agreement P@1"] = line[7]
-            results["Choice Agreement ANR"] = line[8]
+            task = line[0]
+            metric1 = line[1]
+            metric2 = line[2]
+            if task not in metric:
+                results[task] = dict()
+            if metric1 not in results[task]:
+                results[task][metric1] = dict()
+            if metric2 not in results[task][metric1]:
+                results[task][metric1][metric2] = dict()
+            results[task][metric1][metric2]["Global Correlation Pearson"] = float(line[3])
+            results[task][metric1][metric2]["Global Correlation Spearman"] = float(line[4])
+            results[task][metric1][metric2]["Local Correlation Pearson"] = float(line[5])
+            results[task][metric1][metric2]["Local Correlation Spearman"] = float(line[6])
+            results[task][metric1][metric2]["Choice Agreement P@1"] = float(line[7])
+            results[task][metric1][metric2]["Choice Agreement ANR"] = float(line[8])
     return results
 
 def write_results(results):
     with open("results/results.txt", "w", encoding="utf8") as file:
         file.write("Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson,Local Correlation Spearman,Choice Agreement P@1,Choice Agreement ANR\n")
-        file.write(results["Task"] + "," + results["Intrisinc Metric"] + "," + results["Extrinsic Metric"] + "," + results["Global Correlation Pearson"] + "," + results["Global Correlation Spearman"] + "," + results["Local Correlation Pearson"] + "," + results["Local Correlation Spearman"] + "," + results["Choice Agreement P@1"] + "," + results["Choice Agreement ANR"] + "\n")
-            
+        for task in results:
+            for metric1 in results[task]:
+                for metric2 in results[task][metric1]:
+                    file.write(task + "," + metric1 + "," + metric2 + "," + str(results[task][metric1][metric2]["Global Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Global Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Local Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Local Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Choice Agreement P@1"]) + "," + str(results[task][metric1][metric2]["Choice Agreement ANR"]) + "\n")    
 
 def massive_test(task, metric1, metric2):
-
-    anrs = []
-    for i in range(100):
-        print(i)
-        anrs.append(correlation_ANR(task, metric1, metric2, Random=True))
-    print(sum(anrs)/len(anrs))
-
-
-    exit(-1)
-
-    # random test
-    random_pearsons = []
-    random_spearmans = []
-    for i in range(100):
-        print(i)
-        pearson, spearman = correlation_minED_extrinsic(task, metric1, metric2, Random=True)
-        random_pearsons.append(pearson)
-        random_spearmans.append(spearman)
-    print(sum(random_pearsons)/len(random_pearsons))
-    print(sum(random_spearmans)/len(random_spearmans))
+    results = read_results()
     
+    pearson, spearman = correlation_minED_extrinsic(task, metric1, metric2, Random=False)
+    results[task][metric1][metric2]["Global Correlation Pearson"] = pearson
+    results[task][metric1][metric2]["Global Correlation Spearman"] = spearman
+    pearson, spearman = correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.05, Random=False)
+    results[task][metric1][metric2]["Local Correlation Pearson"] = pearson
+    results[task][metric1][metric2]["Local Correlation Spearman"] = spearman
+    score = correlation_best(task, metric1, metric2, Random=False)
+    results[task][metric1][metric2]["Choice Agreement P@1"] = score
+    anrs = correlation_ANR(task, metric1, metric2, Random=False)
+    results[task][metric1][metric2]["Choice Agreement ANR"] = anrs
 
-    exit(-1)
-   
+    write_results(results)
     
-    # random test
-    random_scores = []
-    for i in range(1):
-        print(i)
-        random_scores.append(correlation_best(task, metric1, metric2, Random=False))
-    print(sum(random_scores)/len(random_scores))
-
-    exit(-1)
-    
-    random_pearsons = []
-    random_spearmans = []
-    for i in range(20):
-        print(i)
-        pearson, spearman = correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.10, Random=True)
-        random_pearsons.append(pearson)
-        random_spearmans.append(spearman)
-    print(sum(random_pearsons)/len(random_pearsons))
-    print(sum(random_spearmans)/len(random_spearmans))
-
 
 if __name__ == '__main__':
 
