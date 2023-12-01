@@ -1,11 +1,10 @@
 from deep_translator import GoogleTranslator as Translator
 import progressbar
 import random
-
 from utils.utils import corrector
-
 from sklearn.metrics.pairwise import cosine_similarity
-
+from scipy.stats import pearsonr
+from scipy.stats import spearmanr
 from sentence_transformers import SentenceTransformer
 from bert_score import BERTScorer
 
@@ -270,10 +269,11 @@ def compute_correlation_intrinsic_extrinsic(task, metric1, metric2):
     for dictionary in dataset:
         scores1.append(float(dictionary[metric1]))
         scores2.append(float(dictionary[metric2]))
-    from scipy.stats import pearsonr
-    print("pearson:", pearsonr(scores1, scores2))
-    from scipy.stats import spearmanr
-    print("spearman:", spearmanr(scores1, scores2))
+    # print("pearson:", pearsonr(scores1, scores2))
+    pearson_score = pearsonr(scores1, scores2)
+    # print("spearman:", spearmanr(scores1, scores2))
+    spearman_score = spearmanr(scores1, scores2)
+    return pearson_score[0], spearman_score[0]
 
 
 def correlation_minED_extrinsic(task, metric1, metric2, Random=False):
@@ -285,15 +285,11 @@ def correlation_minED_extrinsic(task, metric1, metric2, Random=False):
             # erase list with a list of random uniform numbers
             improvements_intrinsic[i] = random.uniform(0, 1)
             improvements_extrinsic[i] = random.uniform(0, 1)
-    
-    from scipy.stats import pearsonr
-    pearson = pearsonr(improvements_intrinsic, improvements_extrinsic)
-    print("pearson:", pearson)
-    from scipy.stats import spearmanr
-    spearman = spearmanr(improvements_intrinsic, improvements_extrinsic)
-    print("spearman:", spearman)
-    print(type(pearson[0]), type(spearman[0]))
-    return pearson[0], spearman[0]
+    pearson_score = pearsonr(_scoreimprovements_intrinsic, improvements_extrinsic)
+    # print("pearson:", pearson)
+    spearman_score = spearmanr(improvements_intrinsic, improvements_extrinsic)
+    # print("spearman:", spearman)
+    return pearson_score[0], spearman_score[0]
 
 
 def load_list_improvements(task, metric1, metric2, soustraction=True):
@@ -323,14 +319,12 @@ def load_list_improvements(task, metric1, metric2, soustraction=True):
             improvements_local_extrinsic.append(improvement_extrinsic)
         improvements_intrinsic.append(improvements_local_intrinsic)
         improvements_extrinsic.append(improvements_local_extrinsic)
-    print("Correct generations despite trascription errors:", zero, "out of", len(dataset), "times.")
+    # print("Correct generations despite trascription errors:", zero, "out of", len(dataset), "times.")
     return improvements_intrinsic, improvements_extrinsic
 
 
 def correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.05, Random=False):
     # compute correlation between the minimum edit distance and the extrinsic metric
-    from scipy.stats import pearsonr
-    from scipy.stats import spearmanr
 
     skipped = 0
 
@@ -431,14 +425,45 @@ def correlation_ANR(task, metric1, metric2, Random=False):
 
 
 def generate_all_data(task, metric1, metric2):
+    print("Generating all data for", task, "and metrics", metric1, "and", metric2)
+    print("Reading dataset...")
+    dataset = read_hats()
+    print("Generating intermediate data...")
     intermediate_data(dataset, task)
+    print("Computing metrics...")
     compute_metrics(task, metric1, metric2, verbose=False)
-    compute_correlation_intrinsic_extrinsic(task, metric1, metric2)
+    print("Correcting and saving...")
     correct_and_save(task, metric1, metric2)
 
+
+def compute_all_correlations(task, metric1, metric2):
+    compute_correlation_intrinsic_extrinsic(task, metric1, metric2)
     compute_correlation_minED_extrinsic(task, metric1, metric2)
     correlation_minED_extrinsic_local(task, metric1, metric2)
 
+def read_results():
+    # Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson,Local Correlation Spearman,Choice Agreement P@1,Choice Agreement ANR
+    results = dict()
+    with open("results/results.txt", "r", encoding="utf8") as file:
+        next(file)
+        for line in file:
+            line = line[:-1].split(",")
+            results["Task"] = line[0]
+            results["Intrisinc Metric"] = line[1]
+            results["Extrinsic Metric"] = line[2]
+            results["Global Correlation Pearson"] = line[3]
+            results["Global Correlation Spearman"] = line[4]
+            results["Local Correlation Pearson"] = line[5]
+            results["Local Correlation Spearman"] = line[6]
+            results["Choice Agreement P@1"] = line[7]
+            results["Choice Agreement ANR"] = line[8]
+    return results
+
+def write_results(results):
+    with open("results/results.txt", "w", encoding="utf8") as file:
+        file.write("Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson,Local Correlation Spearman,Choice Agreement P@1,Choice Agreement ANR\n")
+        file.write(results["Task"] + "," + results["Intrisinc Metric"] + "," + results["Extrinsic Metric"] + "," + results["Global Correlation Pearson"] + "," + results["Global Correlation Spearman"] + "," + results["Local Correlation Pearson"] + "," + results["Local Correlation Spearman"] + "," + results["Choice Agreement P@1"] + "," + results["Choice Agreement ANR"] + "\n")
+            
 
 def massive_test(task, metric1, metric2):
 

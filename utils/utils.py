@@ -1,4 +1,3 @@
-
 import numpy
 
 def editDistance(r, h):
