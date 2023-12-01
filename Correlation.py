@@ -10,14 +10,6 @@ from sentence_transformers import SentenceTransformer
 from bert_score import BERTScorer
 
 
-
-#    function				        tâche		    exemple				                                            nom du fichier généré
-
-# 1) read_hats
-# 2) translate_hats_and_save		traduction	    ref hypA genref genhypA					                    hats_with_translations.txt
-# 3) save_semdist_bertscore		    evaluer	        ref hyp genref genhyp SD BS					                hats_with_semdist_bertscore.txt
-# 4) correct_and_save			    correct error	ref hyp genref genhyp SD BS [corr tradcorr SDcorr BScorr]	    hats_with_corrections.txt
-
 def read_hats():
     # dataset = [{"reference": ref, "hypA": hypA, "nbrA": nbrA, "hypB": hypB, "nbrB": nbrB}, ...]
     dataset = []
@@ -49,7 +41,7 @@ def generate(text, task, memory):
         translator = memory
         return translator.translate(text)
     else:
-        raise ValueError("task is not recognized:", task
+        raise ValueError("task is not recognized:", task)
 
 def intermediate_data(dataset, task, verbose=True):
     # generate the intermediate data set
@@ -286,7 +278,7 @@ def compute_correlation_intrinsic_extrinsic(task, metric1, metric2):
 
 def correlation_minED_extrinsic(task, metric1, metric2, Random=False):
     # compute correlation between the minimum edit distance and the extrinsic metric
-    improvements_intrinsic, improvements_extrinsic = load_only_improvements(task, metric1, metric2, )
+    improvements_intrinsic, improvements_extrinsic = load_only_improvements(task, metric1, metric2)
 
     if Random:
         for i in range(len(improvements_intrinsic)):
@@ -342,7 +334,7 @@ def correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.05, Rando
 
     skipped = 0
 
-    improvements_intrinsic, improvements_extrinsic = load_list_improvements(task, metric1, metric2, )
+    improvements_intrinsic, improvements_extrinsic = load_list_improvements(task, metric1, metric2)
     pearsons = []
     spearmans = []
     pvalue_pearsons = []
@@ -372,19 +364,13 @@ def correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.05, Rando
 
                 pvalue_pearsons.append(pearson[1])
                 pvalue_spearmans.append(spearman[1])
-
-    # print("skipped:", skipped)
-    
-    # print("pearson:", sum(pearsons)/len(pearsons), "pvalue:", sum(pvalue_pearsons)/len(pvalue_pearsons))
-    # print("spearman:", sum(spearmans)/len(spearmans), "pvalue:", sum(pvalue_spearmans)/len(pvalue_spearmans))
-
     return sum(pearsons)/len(pearsons), sum(spearmans)/len(spearmans)
 
 
 def correlation_best(task, metric1, metric2, Random=False):
     # compute the number of times the intrisic metric agree to determine the best correction
 
-    improvements_intrinsic, improvements_extrinsic = load_list_improvements(task, metric1, metric2, )
+    improvements_intrinsic, improvements_extrinsic = load_list_improvements(task, metric1, metric2)
 
     best_agree = 0
     disagree = 0
@@ -413,11 +399,6 @@ def correlation_best(task, metric1, metric2, Random=False):
             best_agree += 1
         else:
             disagree += 1
-
-    print("skipped:", skipped, "out of", len(improvements_intrinsic), "times.")
-    print("best_agree:", best_agree, "out of", len(improvements_intrinsic), "times aka", best_agree/(len(improvements_intrinsic)-skipped)*100, "%")
-    print("disagree:", disagree, "out of", len(improvements_intrinsic), "times.", disagree/(len(improvements_intrinsic)-skipped)*100, "%")
-
     return best_agree/(len(improvements_intrinsic)-skipped)*100
 
 
@@ -425,7 +406,7 @@ def correlation_best(task, metric1, metric2, Random=False):
 def correlation_ANR(task, metric1, metric2, Random=False):
     # compute the Average Normalized Rank
     anrs = []
-    improvements_intrinsic, improvements_extrinsic = load_list_improvements(task, metric1, metric2, )
+    improvements_intrinsic, improvements_extrinsic = load_list_improvements(task, metric1, metric2)
     skipped = 0
     for i in range(len(improvements_intrinsic)):
         if len(improvements_intrinsic[i]) < 5:
@@ -446,29 +427,20 @@ def correlation_ANR(task, metric1, metric2, Random=False):
         
         ANR = 1-(a-1)/(b-1)
         anrs.append(ANR)
-        
-    print("skipped:", skipped, "out of", len(improvements_intrinsic), "times.")
     return sum(anrs)/len(anrs)
 
 
+def generate_all_data(task, metric1, metric2):
+    intermediate_data(dataset, task)
+    compute_metrics(task, metric1, metric2, verbose=False)
+    compute_correlation_intrinsic_extrinsic(task, metric1, metric2)
+    correct_and_save(task, metric1, metric2)
+
+    compute_correlation_minED_extrinsic(task, metric1, metric2)
+    correlation_minED_extrinsic_local(task, metric1, metric2)
 
 
-
-if __name__ == '__main__':
-    
-    # dataset = read_hats()
-    # intermediate_data(dataset, task)
-    # compute_metrics(task, metric1, metric2, verbose=False)
-    # compute_correlation_intrinsic_extrinsic(task, metric1, metric2)
-    # correct_and_save(task, metric1, metric2, )
-    # dataset = load_corrected_hats(task, metric1, metric2)
-    # load_only_improvements(task, metric1, metric2, )
-    # compute_correlation_minED_extrinsic(task, metric1, metric2, )
-    # correlation_minED_extrinsic_local(task, metric1, metric2, )
-
-
-    # test()
-    # exit()
+def massive_test(task, metric1, metric2):
 
     anrs = []
     for i in range(100):
@@ -512,3 +484,12 @@ if __name__ == '__main__':
         random_spearmans.append(spearman)
     print(sum(random_pearsons)/len(random_pearsons))
     print(sum(random_spearmans)/len(random_spearmans))
+
+
+if __name__ == '__main__':
+
+    task = "traduction"
+    metric1 = "semdist"
+    metric2 = "bertscore"
+
+    generate_all_data(task, metric1, metric2)
