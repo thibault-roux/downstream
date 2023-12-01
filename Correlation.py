@@ -451,7 +451,7 @@ def read_results():
             task = line[0]
             metric1 = line[1]
             metric2 = line[2]
-            if task not in metric:
+            if task not in results:
                 results[task] = dict()
             if metric1 not in results[task]:
                 results[task][metric1] = dict()
@@ -471,7 +471,8 @@ def write_results(results):
         for task in results:
             for metric1 in results[task]:
                 for metric2 in results[task][metric1]:
-                    file.write(task + "," + metric1 + "," + metric2 + "," + str(results[task][metric1][metric2]["Global Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Global Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Local Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Local Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Choice Agreement P@1"]) + "," + str(results[task][metric1][metric2]["Choice Agreement ANR"]) + "\n")    
+                    file.write(task + "," + metric1 + "," + metric2 + "," + str(results[task][metric1][metric2]["Global Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Global Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Local Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Local Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Choice Agreement P@1"]) + "," + str(results[task][metric1][metric2]["Choice Agreement ANR"]) + "\n")
+    print("Results saved.")
 
 def massive_test(task, metric1, metric2):
     results = read_results()
@@ -491,7 +492,6 @@ def massive_test(task, metric1, metric2):
     
 
 if __name__ == '__main__':
-
     task = "traduction"
     metric1 = "semdist"
     metric2 = "bertscore"
