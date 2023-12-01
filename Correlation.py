@@ -37,7 +37,7 @@ def read_hats():
 
 # -------------------------- Intermediate data -------------------------- #
 
-def get_memory(task):
+def get_memory_generate(task):
     if task == "traduction":
         translator = Translator(source='fr', target='en')
         return translator
@@ -52,7 +52,16 @@ def generate(text, task, memory):
         raise ValueError("task is not recognized:", task
 
 def intermediate_data(dataset, task, verbose=True):
-    memory = get_memory(task) # translator = Translator(source='fr', target='en')
+    # generate the intermediate data set
+
+    # if file already exists, skip generation
+    try:
+        with open("datasets/intermediaire_" + task + ".txt", "r", encoding="utf8") as file:
+            print("File already exists. Skipped generation.")
+            return
+    except:
+        pass
+    memory_generate = get_memory_generate(task) # translator = Translator(source='fr', target='en')
     txt = ""
     # progressbar
     if verbose:
@@ -63,9 +72,9 @@ def intermediate_data(dataset, task, verbose=True):
         ref = dictionary["ref"]
         hypA = dictionary["hypA"]
         hypB = dictionary["hypB"]
-        genref = generate(ref, task, memory)
-        genhypA = generate(hypA, task, memory)
-        genhypB = generate(hypB, task, memory)
+        genref = generate(ref, task, memory_generate)
+        genhypA = generate(hypA, task, memory_generate)
+        genhypB = generate(hypB, task, memory_generate)
         txt += ref + "\t" + hypA + "\t" + genref + "\t" + genhypA + "\n"
         txt += ref + "\t" + hypB + "\t" + genref + "\t" + genhypB + "\n"
 
@@ -116,10 +125,18 @@ def load_metric(metric):
 def compute_metrics(task, metric1, metric2, verbose=True):
     # hats must have been translated
 
-    function_metric1, memory_metric1 = load_metric(metric1)
-    function_metric2, memory_metric2 = load_metric(metric2) 
+    # if file already exists, skip generation
+    try:
+        with open("datasets/metrics_" + task + "_" + metric1 + "_" + metric2 + ".txt", "r", encoding="utf8") as file:
+            print("File already exists. Skipped generation.")
+            return
+    except:
+        pass
 
-    dataset = intermediate_data(task)
+    function_metric1, memory_metric1 = load_metric(metric1)
+    function_metric2, memory_metric2 = load_metric(metric2)
+
+    dataset = load_intermediate_data(task)
     txt = ""
 
     if verbose:
@@ -160,34 +177,22 @@ def load_computed_metrics(task, metric1, metric2):
     return dataset
 
 
-# -------------------------- Correlation -------------------------- #
-
-def compute_correlation_intrinsic_extrinsic():
-    dataset = load_computed_metrics(task, metric1, metric2)
-    semdist = []
-    bertscore = []
-    for dictionary in dataset:
-        semdist.append(float(dictionary[metric1]))
-        bertscore.append(float(dictionary[metric2]))
-    from scipy.stats import pearsonr
-    print("pearson:", pearsonr(semdist, bertscore))
-    from scipy.stats import spearmanr
-    print("spearman:", spearmanr(semdist, bertscore))
-
-
-def correct_and_save(verbose=False):
+def correct_and_save(task, metric1, metric2, verbose=False):
     # correct word error in the hypothesis and compute the improvements
+
+    # if file already exists
+    try:
+        with open("datasets/corrections_" + task + "_" + metric1 + "_" + metric2 + ".txt", "r", encoding="utf8") as file:
+            print("File already exists. Skipped generation.")
+            return
+    except:
+        pass
+
     dataset = load_computed_metrics(task, metric1, metric2)
 
-    # SemDist Sentence Camembert-large
-    from sentence_transformers import SentenceTransformer
-    semdist_model = SentenceTransformer('dangvantuan/sentence-camembert-large')
-
-    # BERTScore
-    from bert_score import BERTScorer
-    bertscore_model = BERTScorer(lang="en")
-    
-    translator = Translator(source='fr', target='en')
+    function_metric1, memory_metric1 = load_metric(metric1)
+    function_metric2, memory_metric2 = load_metric(metric2)
+    memory_generate = get_memory_generate(task)
 
     txt = ""
     if verbose:
@@ -200,27 +205,27 @@ def correct_and_save(verbose=False):
         hyp = dictionary["hyp"]
         genref = dictionary["genref"]
         genhyp = dictionary["genhyp"]
-        semdist_score = float(dictionary[metric1])
-        bertscore_score = float(dictionary[metric2])
+        score1 = float(dictionary[metric1])
+        score2 = float(dictionary[metric2])
         corrections = corrector(ref, hyp) # list of possible word corrections
-        txt += ref + "\t" + hyp + "\t" + genref + "\t" + genhyp + "\t" + str(semdist_score) + "\t" + str(bertscore_score)
+        txt += ref + "\t" + hyp + "\t" + genref + "\t" + genhyp + "\t" + str(score1) + "\t" + str(score2)
         for correction in corrections:
-            semdist_correction = semdist(ref, correction, semdist_model)
-            tradcorrection = translator.translate(correction)
-            bertscore_correction = bertscore(genref, tradcorrection, bertscore_model)
-            txt += "\t" + correction + "," + tradcorrection + "," + str(semdist_correction) + "," + str(bertscore_correction)
+            score1_correction = function_metric1(ref, correction, memory_metric1)
+            gencorrection = generate(correction, task, memory_generate)
+            score2_correction = function_metric2(genref, gencorrection, memory_metric2)
+            txt += "\t" + correction + "," + gencorrection + "," + str(score1_correction) + "," + str(score2_correction)
         txt += "\n"
         if verbose:
             bar.update(i)
             i += 1
-    with open("datasets/hats_with_corrections.txt", "w", encoding="utf8") as file:
+    with open("datasets/corrections_" + task + "_" + metric1 + "_" + metric2 + ".txt", "w", encoding="utf8") as file:
         file.write(txt)
     print("Function worked properly.")
 
 
-def load_corrected_hats():
+def load_corrected_hats(task, metric1, metric2):
     dataset = []
-    with open("datasets/hats_with_corrections.txt", "r", encoding="utf8") as file:
+    with open("datasets/corrections_" + task + "_" + metric1 + "_" + metric2 + ".txt", "r", encoding="utf8") as file:
         for line in file:
             line = line[:-1].split("\t")
             dictionary = dict()
@@ -236,65 +241,52 @@ def load_corrected_hats():
             dataset.append(dictionary)
     return dataset
 
-def repair_corrected_dataset(): # does not work because it is not easy to find where the comma are really
-    # load the dataset and repair it by selecting only float numbers
-    with open("datasets/hats_with_corrections.txt", "r", encoding="utf8") as file:
-        txt = ""
-        nbrError = 0
-        commaInref = 0
-        commaInhyp = 0
-        for line in file:
-            linesplit = line[:-1].split("\t")
-            ref = linesplit[0]
-            hyp = linesplit[1]
-            if "," in ref:
-                commaInref += 1
-            if "," in hyp:
-                commaInhyp += 1
-            corrections = linesplit[6:]
-            for quadruple in corrections:
-                if len(quadruple.split(",")) != 4:
-                    print(line)
-                    input()
-                    print(quadruple)
-                    nbrError += 1
-        print("nbrError:", nbrError)
-        print("commaInref:", commaInref)
-        print("commaInhyp:", commaInhyp)
-        # should check if there is a comma in references
-        # I can keep the first as a real comma and the one preceding numbers?
-        # also check if there are numbers in the references or hypotheses?
-
-def load_only_improvements(soustraction=True):
+def load_only_improvements(task, metric1, metric2, soustraction=True):
     zero = 0
     improvements_intrinsic = []
     improvements_extrinsic = []
-    dataset = load_corrected_hats()
+    dataset = load_corrected_hats(task, metric1, metric2)
     for dictionary in dataset:
-        semdist_score = float(dictionary[metric1])
-        bertscore_score = float(dictionary[metric2])
-        if semdist_score == 0 or bertscore_score == 0:
+        score1 = float(dictionary[metric1])
+        score2 = float(dictionary[metric2])
+        if score1 == 0 or score2 == 0:
             zero += 1
             if not soustraction:
                 continue
         for correction in dictionary["corrections"]:
-            semdist_correction = float(correction[-2])
-            bertscore_correction = float(correction[-1])
+            score1_correction = float(correction[-2])
+            score2_correction = float(correction[-1])
             if soustraction:
-                improvement_intrinsic = semdist_score - semdist_correction
-                improvement_extrinsic = bertscore_score - bertscore_correction
+                improvement_intrinsic = score1 - score1_correction
+                improvement_extrinsic = score2 - score2_correction
             else:
-                improvement_intrinsic = semdist_correction/semdist_score*100 - 100
-                improvement_extrinsic = bertscore_correction/bertscore_score*100 - 100
+                improvement_intrinsic = score1_correction/score1*100 - 100
+                improvement_extrinsic = score2_correction/score2*100 - 100
             improvements_intrinsic.append(improvement_intrinsic)
             improvements_extrinsic.append(improvement_extrinsic)
-    print("Correct traductions despite trascription errors:", zero, "out of", len(dataset), "times.")
+    print("Correct generations despite trascription errors:", zero, "out of", len(dataset), "times.")
     return improvements_intrinsic, improvements_extrinsic
 
 
-def correlation_minED_extrinsic(Random=False):
+
+# -------------------------- Correlation -------------------------- #
+
+def compute_correlation_intrinsic_extrinsic(task, metric1, metric2):
+    dataset = load_computed_metrics(task, metric1, metric2)
+    scores1 = []
+    scores2 = []
+    for dictionary in dataset:
+        scores1.append(float(dictionary[metric1]))
+        scores2.append(float(dictionary[metric2]))
+    from scipy.stats import pearsonr
+    print("pearson:", pearsonr(scores1, scores2))
+    from scipy.stats import spearmanr
+    print("spearman:", spearmanr(scores1, scores2))
+
+
+def correlation_minED_extrinsic(task, metric1, metric2, Random=False):
     # compute correlation between the minimum edit distance and the extrinsic metric
-    improvements_intrinsic, improvements_extrinsic = load_only_improvements()
+    improvements_intrinsic, improvements_extrinsic = load_only_improvements(task, metric1, metric2, )
 
     if Random:
         for i in range(len(improvements_intrinsic)):
@@ -312,45 +304,45 @@ def correlation_minED_extrinsic(Random=False):
     return pearson[0], spearman[0]
 
 
-def load_list_improvements(soustraction=True):
+def load_list_improvements(task, metric1, metric2, soustraction=True):
     zero = 0
     improvements_intrinsic = []
     improvements_extrinsic = []
-    dataset = load_corrected_hats()
+    dataset = load_corrected_hats(task, metric1, metric2)
     for dictionary in dataset:
         improvements_local_intrinsic = []
         improvements_local_extrinsic = []
-        semdist_score = float(dictionary[metric1])
-        bertscore_score = float(dictionary[metric2])
-        if semdist_score == 0 or bertscore_score == 0:
+        score1 = float(dictionary[metric1])
+        score2 = float(dictionary[metric2])
+        if score1 == 0 or score2 == 0:
             zero += 1
             if not soustraction:
                 continue
         for correction in dictionary["corrections"]:
-            semdist_correction = float(correction[-2])
-            bertscore_correction = float(correction[-1])
+            score1_correction = float(correction[-2])
+            score2_correction = float(correction[-1])
             if soustraction:
-                improvement_intrinsic = semdist_score - semdist_correction
-                improvement_extrinsic = bertscore_score - bertscore_correction
+                improvement_intrinsic = score1 - score1_correction
+                improvement_extrinsic = score2 - score2_correction
             else:
-                improvement_intrinsic = semdist_correction/semdist_score*100 - 100
-                improvement_extrinsic = bertscore_correction/bertscore_score*100 - 100
+                improvement_intrinsic = score1_correction/score1*100 - 100
+                improvement_extrinsic = score2_correction/score2*100 - 100
             improvements_local_intrinsic.append(improvement_intrinsic)
             improvements_local_extrinsic.append(improvement_extrinsic)
         improvements_intrinsic.append(improvements_local_intrinsic)
         improvements_extrinsic.append(improvements_local_extrinsic)
-    print("Correct traductions despite trascription errors:", zero, "out of", len(dataset), "times.")
+    print("Correct generations despite trascription errors:", zero, "out of", len(dataset), "times.")
     return improvements_intrinsic, improvements_extrinsic
 
 
-def correlation_minED_extrinsic_local(signif=0.05, Random=False):
+def correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.05, Random=False):
     # compute correlation between the minimum edit distance and the extrinsic metric
     from scipy.stats import pearsonr
     from scipy.stats import spearmanr
 
     skipped = 0
 
-    improvements_intrinsic, improvements_extrinsic = load_list_improvements()
+    improvements_intrinsic, improvements_extrinsic = load_list_improvements(task, metric1, metric2, )
     pearsons = []
     spearmans = []
     pvalue_pearsons = []
@@ -389,10 +381,10 @@ def correlation_minED_extrinsic_local(signif=0.05, Random=False):
     return sum(pearsons)/len(pearsons), sum(spearmans)/len(spearmans)
 
 
-def correlation_best(Random=False):
+def correlation_best(task, metric1, metric2, Random=False):
     # compute the number of times the intrisic metric agree to determine the best correction
 
-    improvements_intrinsic, improvements_extrinsic = load_list_improvements()
+    improvements_intrinsic, improvements_extrinsic = load_list_improvements(task, metric1, metric2, )
 
     best_agree = 0
     disagree = 0
@@ -430,10 +422,10 @@ def correlation_best(Random=False):
 
 
 
-def correlation_ANR(Random=False):
+def correlation_ANR(task, metric1, metric2, Random=False):
     # compute the Average Normalized Rank
     anrs = []
-    improvements_intrinsic, improvements_extrinsic = load_list_improvements()
+    improvements_intrinsic, improvements_extrinsic = load_list_improvements(task, metric1, metric2, )
     skipped = 0
     for i in range(len(improvements_intrinsic)):
         if len(improvements_intrinsic[i]) < 5:
@@ -460,39 +452,19 @@ def correlation_ANR(Random=False):
 
 
 
-# a: rank of correct solution
-# b: number of elements
-def metric(a, b):
-	return 1-(a-1)/(b-1)
-
-
-def test():
-	args = [(1,2), (2,2), (2,100), (98,100), (50,100), (2,4), (4,4), (2,3), (3,4), (4,5)]
-	answ = [1, 0, 0.98, 0.02, 0.5, 0.5, 0, 0.3, 0.2, 0.15]
-	# args = [(80,100), (20,21), (10,20), (22,33), (1,10), (2,10)]
-	# answ = [0.2, 0.05, 0.5, 0.33, 1, 0.9]
-	# args = [(50000000,100000000)]
-	# answ = [0.5]
-	
-	for i in range(len(args)):
-		a = args[i][0]
-		b = args[i][1]
-		answer = metric(a, b)
-		print(str(a) + "/" + str(b) + " = " + str(answer) + " (real answer == " + str(answ[i]) + ")")
-
 
 
 if __name__ == '__main__':
     
     # dataset = read_hats()
     # intermediate_data(dataset, task)
-    # compute_metrics(verbose=False)
-    # compute_correlation_intrinsic_extrinsic()
-    # correct_and_save()
-    # dataset = load_corrected_hats()
-    # load_only_improvements()
-    # compute_correlation_minED_extrinsic()
-    # correlation_minED_extrinsic_local()
+    # compute_metrics(task, metric1, metric2, verbose=False)
+    # compute_correlation_intrinsic_extrinsic(task, metric1, metric2)
+    # correct_and_save(task, metric1, metric2, )
+    # dataset = load_corrected_hats(task, metric1, metric2)
+    # load_only_improvements(task, metric1, metric2, )
+    # compute_correlation_minED_extrinsic(task, metric1, metric2, )
+    # correlation_minED_extrinsic_local(task, metric1, metric2, )
 
 
     # test()
@@ -501,7 +473,7 @@ if __name__ == '__main__':
     anrs = []
     for i in range(100):
         print(i)
-        anrs.append(correlation_ANR(Random=True))
+        anrs.append(correlation_ANR(task, metric1, metric2, Random=True))
     print(sum(anrs)/len(anrs))
 
 
@@ -512,7 +484,7 @@ if __name__ == '__main__':
     random_spearmans = []
     for i in range(100):
         print(i)
-        pearson, spearman = correlation_minED_extrinsic(Random=True)
+        pearson, spearman = correlation_minED_extrinsic(task, metric1, metric2, Random=True)
         random_pearsons.append(pearson)
         random_spearmans.append(spearman)
     print(sum(random_pearsons)/len(random_pearsons))
@@ -526,7 +498,7 @@ if __name__ == '__main__':
     random_scores = []
     for i in range(1):
         print(i)
-        random_scores.append(correlation_best(Random=False))
+        random_scores.append(correlation_best(task, metric1, metric2, Random=False))
     print(sum(random_scores)/len(random_scores))
 
     exit(-1)
@@ -535,7 +507,7 @@ if __name__ == '__main__':
     random_spearmans = []
     for i in range(20):
         print(i)
-        pearson, spearman = correlation_minED_extrinsic_local(signif=0.10, Random=True)
+        pearson, spearman = correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.10, Random=True)
         random_pearsons.append(pearson)
         random_spearmans.append(spearman)
     print(sum(random_pearsons)/len(random_pearsons))
