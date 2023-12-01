@@ -6,14 +6,17 @@ from utils.utils import corrector
 
 from sklearn.metrics.pairwise import cosine_similarity
 
+from sentence_transformers import SentenceTransformer
+from bert_score import BERTScorer
+
 
 
 #    function				        tâche		    exemple				                                            nom du fichier généré
 
 # 1) read_hats
-# 2) translate_hats_and_save		traduction	    ref hypA tradref tradhypA					                    hats_with_translations.txt
-# 3) save_semdist_bertscore		    evaluer	        ref hyp tradref tradhyp SD BS					                hats_with_semdist_bertscore.txt
-# 4) correct_and_save			    correct error	ref hyp tradref tradhyp SD BS [corr tradcorr SDcorr BScorr]	    hats_with_corrections.txt
+# 2) translate_hats_and_save		traduction	    ref hypA genref genhypA					                    hats_with_translations.txt
+# 3) save_semdist_bertscore		    evaluer	        ref hyp genref genhyp SD BS					                hats_with_semdist_bertscore.txt
+# 4) correct_and_save			    correct error	ref hyp genref genhyp SD BS [corr tradcorr SDcorr BScorr]	    hats_with_corrections.txt
 
 def read_hats():
     # dataset = [{"reference": ref, "hypA": hypA, "nbrA": nbrA, "hypB": hypB, "nbrB": nbrB}, ...]
@@ -30,6 +33,9 @@ def read_hats():
             dictionary["nbrB"] = int(line[4])
             dataset.append(dictionary)
     return dataset
+
+
+# -------------------------- Intermediate data -------------------------- #
 
 def get_memory(task):
     if task == "traduction":
@@ -57,11 +63,11 @@ def intermediate_data(dataset, task, verbose=True):
         ref = dictionary["ref"]
         hypA = dictionary["hypA"]
         hypB = dictionary["hypB"]
-        tradref = generate(ref, task, memory)
+        genref = generate(ref, task, memory)
         genhypA = generate(hypA, task, memory)
         genhypB = generate(hypB, task, memory)
-        txt += ref + "\t" + hypA + "\t" + tradref + "\t" + genhypA + "\n"
-        txt += ref + "\t" + hypB + "\t" + tradref + "\t" + genhypB + "\n"
+        txt += ref + "\t" + hypA + "\t" + genref + "\t" + genhypA + "\n"
+        txt += ref + "\t" + hypB + "\t" + genref + "\t" + genhypB + "\n"
 
         if verbose:
             bar.update(i)
@@ -78,8 +84,8 @@ def load_intermediate_data(task):
             dictionary = dict()
             dictionary["ref"] = line[0]
             dictionary["hyp"] = line[1]
-            dictionary["tradref"] = line[2]
-            dictionary["tradhyp"] = line[3]
+            dictionary["genref"] = line[2]
+            dictionary["genhyp"] = line[3]
             dataset.append(dictionary)
     return dataset
 
@@ -99,20 +105,21 @@ def bertscore(ref, hyp, memory):
     P, R, F1 = scorer.score([hyp], [ref])
     return 100-F1.numpy()[0]*100 # lower is better
 
-# -------------------------- Fin des metrics -------------------------- #
+def load_metric(metric):
+    if metric == "semdist":
+        return semdist, SentenceTransformer('dangvantuan/sentence-camembert-large')
+    elif metric == metric2:
+        return bertscore, BERTScorer(lang="en")
+    else:
+        raise ValueError("metric is not recognized:", metric)
 
 def compute_metrics(task, metric1, metric2, verbose=True):
     # hats must have been translated
 
-    # SemDist Sentence Camembert-large
-    from sentence_transformers import SentenceTransformer
-    semdist_model = SentenceTransformer('dangvantuan/sentence-camembert-large')
+    function_metric1, memory_metric1 = load_metric(metric1)
+    function_metric2, memory_metric2 = load_metric(metric2) 
 
-    # BERTScore
-    from bert_score import BERTScorer
-    bertscore_model = BERTScorer(lang="en")
-
-    dataset = intermediate_data()
+    dataset = intermediate_data(task)
     txt = ""
 
     if verbose:
@@ -123,42 +130,45 @@ def compute_metrics(task, metric1, metric2, verbose=True):
     for dictionary in dataset:
         ref = dictionary["ref"]
         hyp = dictionary["hyp"]
-        tradref = dictionary["tradref"]
-        tradhyp = dictionary["tradhyp"]
-        semdist_score = semdist(ref, hyp, semdist_model)
-        bertscore_score = bertscore(tradref, tradhyp, bertscore_model)
-        txt += ref + "\t" + hyp + "\t" + tradref + "\t" + tradhyp + "\t" + str(semdist_score) + "\t" + str(bertscore_score) + "\n"
+        genref = dictionary["genref"]
+        genhyp = dictionary["genhyp"]
+        score1 = function_metric1(ref, hyp, memory_metric1)
+        score2 = function_metric2(genref, genhyp, memory_metric2)
+        txt += ref + "\t" + hyp + "\t" + genref + "\t" + genhyp + "\t" + str(score1) + "\t" + str(score2) + "\n"
 
         if verbose:
             bar.update(i)
             i += 1
     
     # save data set
-    with open("datasets/hats_with_semdist_bertscore.txt", "w", encoding="utf8") as file:
+    with open("datasets/metrics_" + task + "_" + metric1 + "_" + metric2 + ".txt", "w", encoding="utf8") as file:
         file.write(txt)
 
-def load_semdist_bertscore():
+def load_computed_metrics(task, metric1, metric2):
     dataset = []
-    with open("datasets/hats_with_semdist_bertscore.txt", "r", encoding="utf8") as file:
+    with open("datasets/metrics_" + task + "_" + metric1 + "_" + metric2 + ".txt", "r", encoding="utf8") as file:
         for line in file:
             line = line[:-1].split("\t")
             dictionary = dict()
-            dictionary["reference"] = line[0]
+            dictionary["ref"] = line[0]
             dictionary["hyp"] = line[1]
-            dictionary["tradref"] = line[2]
-            dictionary["tradhyp"] = line[3]
-            dictionary["semdist"] = line[4]
-            dictionary["bertscore"] = line[5]
+            dictionary["genref"] = line[2]
+            dictionary["genhyp"] = line[3]
+            dictionary[metric1] = line[4]
+            dictionary[metric2] = line[5]
             dataset.append(dictionary)
     return dataset
 
+
+# -------------------------- Correlation -------------------------- #
+
 def compute_correlation_intrinsic_extrinsic():
-    dataset = load_semdist_bertscore()
+    dataset = load_computed_metrics(task, metric1, metric2)
     semdist = []
     bertscore = []
     for dictionary in dataset:
-        semdist.append(float(dictionary["semdist"]))
-        bertscore.append(float(dictionary["bertscore"]))
+        semdist.append(float(dictionary[metric1]))
+        bertscore.append(float(dictionary[metric2]))
     from scipy.stats import pearsonr
     print("pearson:", pearsonr(semdist, bertscore))
     from scipy.stats import spearmanr
@@ -167,7 +177,7 @@ def compute_correlation_intrinsic_extrinsic():
 
 def correct_and_save(verbose=False):
     # correct word error in the hypothesis and compute the improvements
-    dataset = load_semdist_bertscore()
+    dataset = load_computed_metrics(task, metric1, metric2)
 
     # SemDist Sentence Camembert-large
     from sentence_transformers import SentenceTransformer
@@ -186,18 +196,18 @@ def correct_and_save(verbose=False):
         bar.start()
         i = 0
     for dictionary in dataset:
-        ref = dictionary["reference"]
+        ref = dictionary["ref"]
         hyp = dictionary["hyp"]
-        tradref = dictionary["tradref"]
-        tradhyp = dictionary["tradhyp"]
-        semdist_score = float(dictionary["semdist"])
-        bertscore_score = float(dictionary["bertscore"])
+        genref = dictionary["genref"]
+        genhyp = dictionary["genhyp"]
+        semdist_score = float(dictionary[metric1])
+        bertscore_score = float(dictionary[metric2])
         corrections = corrector(ref, hyp) # list of possible word corrections
-        txt += ref + "\t" + hyp + "\t" + tradref + "\t" + tradhyp + "\t" + str(semdist_score) + "\t" + str(bertscore_score)
+        txt += ref + "\t" + hyp + "\t" + genref + "\t" + genhyp + "\t" + str(semdist_score) + "\t" + str(bertscore_score)
         for correction in corrections:
             semdist_correction = semdist(ref, correction, semdist_model)
             tradcorrection = translator.translate(correction)
-            bertscore_correction = bertscore(tradref, tradcorrection, bertscore_model)
+            bertscore_correction = bertscore(genref, tradcorrection, bertscore_model)
             txt += "\t" + correction + "," + tradcorrection + "," + str(semdist_correction) + "," + str(bertscore_correction)
         txt += "\n"
         if verbose:
@@ -214,12 +224,12 @@ def load_corrected_hats():
         for line in file:
             line = line[:-1].split("\t")
             dictionary = dict()
-            dictionary["reference"] = line[0]
+            dictionary["ref"] = line[0]
             dictionary["hyp"] = line[1]
-            dictionary["tradref"] = line[2]
-            dictionary["tradhyp"] = line[3]
-            dictionary["semdist"] = line[4]
-            dictionary["bertscore"] = line[5]
+            dictionary["genref"] = line[2]
+            dictionary["genhyp"] = line[3]
+            dictionary[metric1] = line[4]
+            dictionary[metric2] = line[5]
             dictionary["corrections"] = []
             for i in range(6, len(line)):
                 dictionary["corrections"].append(line[i].split(","))
@@ -261,8 +271,8 @@ def load_only_improvements(soustraction=True):
     improvements_extrinsic = []
     dataset = load_corrected_hats()
     for dictionary in dataset:
-        semdist_score = float(dictionary["semdist"])
-        bertscore_score = float(dictionary["bertscore"])
+        semdist_score = float(dictionary[metric1])
+        bertscore_score = float(dictionary[metric2])
         if semdist_score == 0 or bertscore_score == 0:
             zero += 1
             if not soustraction:
@@ -310,8 +320,8 @@ def load_list_improvements(soustraction=True):
     for dictionary in dataset:
         improvements_local_intrinsic = []
         improvements_local_extrinsic = []
-        semdist_score = float(dictionary["semdist"])
-        bertscore_score = float(dictionary["bertscore"])
+        semdist_score = float(dictionary[metric1])
+        bertscore_score = float(dictionary[metric2])
         if semdist_score == 0 or bertscore_score == 0:
             zero += 1
             if not soustraction:
@@ -475,8 +485,8 @@ def test():
 if __name__ == '__main__':
     
     # dataset = read_hats()
-    # intermediate_data(dataset)
-    # save_semdist_bertscore(verbose=False)
+    # intermediate_data(dataset, task)
+    # compute_metrics(verbose=False)
     # compute_correlation_intrinsic_extrinsic()
     # correct_and_save()
     # dataset = load_corrected_hats()
