@@ -8,6 +8,9 @@ from scipy.stats import spearmanr
 from sentence_transformers import SentenceTransformer
 from bert_score import BERTScorer
 import os
+from TTS.api import TTS
+from speechbrain.lobes.models.huggingface_wav2vec import HuggingFaceWav2Vec2
+import torchaudio
 
 def read_hats():
     # dataset = [{"reference": ref, "hypA": hypA, "nbrA": nbrA, "hypB": hypB, "nbrB": nbrB}, ...]
@@ -32,6 +35,10 @@ def get_memory_generate(task):
     if task == "traduction":
         translator = Translator(source='fr', target='en')
         return translator
+    elif task == "tts":
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
+        return tts
     else:
         raise ValueError("task is not recognized:", task)
 
@@ -39,6 +46,9 @@ def generate(text, task, memory):
     if task == "traduction":
         translator = memory
         return translator.translate(text)
+    elif task == "tts":
+        get_wav(text, tts)
+        return text
     else:
         raise ValueError("task is not recognized:", task)
 
@@ -93,6 +103,9 @@ def load_intermediate_data(task):
 
 # -------------------------- Metrics -------------------------- #
 
+
+# ----- Translation ------ #
+
 def semdist(ref, hyp, memory):
     model = memory
     ref_projection = model.encode(ref).reshape(1, -1)
@@ -105,11 +118,72 @@ def bertscore(ref, hyp, memory):
     P, R, F1 = scorer.score([hyp], [ref])
     return 100-F1.numpy()[0]*100 # lower is better
 
+# ----- TTS ------ #
+
+def load_wav(path):
+    waveform, sample_rate = torchaudio.load(path)
+    # Resample if needed
+    target_sample_rate = 16000  # Wav2Vec 2.0's expected sample rate
+    if sample_rate != target_sample_rate:
+        resampler = torchaudio.transforms.Resample(sample_rate, target_sample_rate)
+        waveform = resampler(waveform)
+    # Ensure mono-channel (1 channel)
+    if waveform.shape[0] > 1:
+        waveform = torch.mean(waveform, dim=0, keepdim=True)
+    return waveform
+
+def get_wav(text, tts): # save audio file if not exists
+    text = text.lower()
+    # check if files exist in dataset/audiofiles
+    namefile = text
+    # remove unexpected character
+    accepted = "abcdefghijklmnopqrstuvwxyzéèêëàâäôöûüùîïç_"
+    for x in namefile:
+        if x not in accepted:
+            namefile = namefile.replace(x, "_")
+    # if audio file does not exists
+    if not os.path.isfile("datasets/audiofiles/" + namefile + ".wav"):
+        tts.tts_to_file(text, speaker_wav="datasets/audiofiles/bfm15.wav", language="fr", file_path="datasets/audiofiles/" + namefile + ".wav")
+    # load audio file
+    return load_wav("datasets/audiofiles/" + namefile + ".wav")
+
+def get_features(wav, model_w2v2):
+    features = model_w2v2.forward(wav)
+    # compute only the average of the features in order to have the same shape
+    average_features = torch.mean(features[0], dim=0, keepdim=True)[0]
+    return average_features
+
+def speech_difference(ref, hyp, memory):
+    tts, model_w2v2 = memory
+    # get audio files
+    ref_wav = get_wav(ref, tts)
+    hyp_wav = get_wav(hyp, tts)
+    # get features
+    ref_features = get_features(ref_wav, model_w2v2)
+    hyp_features = get_features(hyp_wav, model_w2v2)
+    # compute cosine similarity
+    cs = cosine_similarity(ref_features, hyp_features)
+    return (1-cs)*100 # lower is better
+
+def load_w2v_model():
+    # HuggingFace model hub
+    model_hub_w2v2 = "LeBenchmark/wav2vec2-FR-7K-large"
+    model_w2v2 = HuggingFaceWav2Vec2(model_hub_w2v2, save_path='./save')
+    return model_w2v2
+
+
+# ----- Common ------ #
+
 def load_metric(metric):
     if metric == "semdist":
         return semdist, SentenceTransformer('dangvantuan/sentence-camembert-large')
-    elif metric == metric2:
-        return bertscore, BERTScorer(lang="en")
+    elif metric == "bertscore":
+        return bertscore, BERTScorer(lang="en")*
+    elif metric == "speech_difference":
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
+        model_w2v2 = load_w2v_model()
+        return speech_difference, (tts, model_w2v2)
     else:
         raise ValueError("metric is not recognized:", metric)
 
@@ -500,7 +574,6 @@ def massive_test(task, metric1, metric2):
     # check first if the results are already computed
     if not already_computed(task, metric1, metric2, "Global Correlation Pearson", results):
         pearson, spearman = correlation_minED_extrinsic(task, metric1, metric2, Random=False)
-        print(results)
         results[task][metric1][metric2]["Global Correlation Pearson"] = pearson
         results[task][metric1][metric2]["Global Correlation Spearman"] = spearman
     if not already_computed(task, metric1, metric2, "Local Correlation Pearson", results):
@@ -518,9 +591,15 @@ def massive_test(task, metric1, metric2):
     
 
 if __name__ == '__main__':
-    task = "traduction"
+    # task = "traduction"
+    # metric1 = "semdist"
+    # metric2 = "bertscore"
+    
+    task = "tts"
     metric1 = "semdist"
-    metric2 = "bertscore"
+    metric2 = "speech_difference"
+
+    # check how to generate intermediate data when using the Phoneme Error Rate
 
     # generate_all_data(task, metric1, metric2)
     massive_test(task, metric1, metric2)
