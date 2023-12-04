@@ -285,7 +285,7 @@ def correlation_minED_extrinsic(task, metric1, metric2, Random=False):
             # erase list with a list of random uniform numbers
             improvements_intrinsic[i] = random.uniform(0, 1)
             improvements_extrinsic[i] = random.uniform(0, 1)
-    pearson_score = pearsonr(_scoreimprovements_intrinsic, improvements_extrinsic)
+    pearson_score = pearsonr(improvements_intrinsic, improvements_extrinsic)
     # print("pearson:", pearson)
     spearman_score = spearmanr(improvements_intrinsic, improvements_extrinsic)
     # print("spearman:", spearman)
@@ -483,6 +483,15 @@ def already_computed(task, metric1, metric2, correlation, results):
             if metric2 in results[task][metric1]:
                 if correlation in results[task][metric1][metric2]:
                     return True
+            else:
+                results[task][metric1][metric2] = dict()
+        else:
+            results[task][metric1] = dict()
+            results[task][metric1][metric2] = dict()
+    else:
+        results[task] = dict()
+        results[task][metric1] = dict()
+        results[task][metric1][metric2] = dict()
     return False
 
 def massive_test(task, metric1, metric2):
@@ -491,6 +500,7 @@ def massive_test(task, metric1, metric2):
     # check first if the results are already computed
     if not already_computed(task, metric1, metric2, "Global Correlation Pearson", results):
         pearson, spearman = correlation_minED_extrinsic(task, metric1, metric2, Random=False)
+        print(results)
         results[task][metric1][metric2]["Global Correlation Pearson"] = pearson
         results[task][metric1][metric2]["Global Correlation Spearman"] = spearman
     if not already_computed(task, metric1, metric2, "Local Correlation Pearson", results):
