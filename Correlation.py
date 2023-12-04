@@ -7,7 +7,7 @@ from scipy.stats import pearsonr
 from scipy.stats import spearmanr
 from sentence_transformers import SentenceTransformer
 from bert_score import BERTScorer
-
+import os
 
 def read_hats():
     # dataset = [{"reference": ref, "hypA": hypA, "nbrA": nbrA, "hypB": hypB, "nbrB": nbrB}, ...]
@@ -444,25 +444,28 @@ def compute_all_correlations(task, metric1, metric2):
 def read_results():
     # Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson,Local Correlation Spearman,Choice Agreement P@1,Choice Agreement ANR
     results = dict()
-    with open("results/results.txt", "r", encoding="utf8") as file:
-        next(file)
-        for line in file:
-            line = line[:-1].split(",")
-            task = line[0]
-            metric1 = line[1]
-            metric2 = line[2]
-            if task not in results:
-                results[task] = dict()
-            if metric1 not in results[task]:
-                results[task][metric1] = dict()
-            if metric2 not in results[task][metric1]:
-                results[task][metric1][metric2] = dict()
-            results[task][metric1][metric2]["Global Correlation Pearson"] = float(line[3])
-            results[task][metric1][metric2]["Global Correlation Spearman"] = float(line[4])
-            results[task][metric1][metric2]["Local Correlation Pearson"] = float(line[5])
-            results[task][metric1][metric2]["Local Correlation Spearman"] = float(line[6])
-            results[task][metric1][metric2]["Choice Agreement P@1"] = float(line[7])
-            results[task][metric1][metric2]["Choice Agreement ANR"] = float(line[8])
+
+    # check if file does not exist
+    if os.path.exists("results/results.txt"):
+        with open("results/results.txt", "r", encoding="utf8") as file:
+            next(file)
+            for line in file:
+                line = line[:-1].split(",")
+                task = line[0]
+                metric1 = line[1]
+                metric2 = line[2]
+                if task not in results:
+                    results[task] = dict()
+                if metric1 not in results[task]:
+                    results[task][metric1] = dict()
+                if metric2 not in results[task][metric1]:
+                    results[task][metric1][metric2] = dict()
+                results[task][metric1][metric2]["Global Correlation Pearson"] = float(line[3])
+                results[task][metric1][metric2]["Global Correlation Spearman"] = float(line[4])
+                results[task][metric1][metric2]["Local Correlation Pearson"] = float(line[5])
+                results[task][metric1][metric2]["Local Correlation Spearman"] = float(line[6])
+                results[task][metric1][metric2]["Choice Agreement P@1"] = float(line[7])
+                results[task][metric1][metric2]["Choice Agreement ANR"] = float(line[8])
     return results
 
 def write_results(results):
@@ -474,19 +477,32 @@ def write_results(results):
                     file.write(task + "," + metric1 + "," + metric2 + "," + str(results[task][metric1][metric2]["Global Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Global Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Local Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Local Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Choice Agreement P@1"]) + "," + str(results[task][metric1][metric2]["Choice Agreement ANR"]) + "\n")
     print("Results saved.")
 
+def already_computed(task, metric1, metric2, eval, results):
+    if task in results:
+        if metric1 in results[task]:
+            if metric2 in results[task][metric1]:
+                if eval in results[task][metric1][metric2]:
+                    return True
+    return False
+
 def massive_test(task, metric1, metric2):
     results = read_results()
     
-    pearson, spearman = correlation_minED_extrinsic(task, metric1, metric2, Random=False)
-    results[task][metric1][metric2]["Global Correlation Pearson"] = pearson
-    results[task][metric1][metric2]["Global Correlation Spearman"] = spearman
-    pearson, spearman = correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.05, Random=False)
-    results[task][metric1][metric2]["Local Correlation Pearson"] = pearson
-    results[task][metric1][metric2]["Local Correlation Spearman"] = spearman
-    score = correlation_best(task, metric1, metric2, Random=False)
-    results[task][metric1][metric2]["Choice Agreement P@1"] = score
-    anrs = correlation_ANR(task, metric1, metric2, Random=False)
-    results[task][metric1][metric2]["Choice Agreement ANR"] = anrs
+    # check first if the results are already computed
+    if not already_computed(task, metric1, metric2, "Global Correlation Pearson", results):
+        pearson, spearman = correlation_minED_extrinsic(task, metric1, metric2, Random=False)
+        results[task][metric1][metric2]["Global Correlation Pearson"] = pearson
+        results[task][metric1][metric2]["Global Correlation Spearman"] = spearman
+    if not already_computed(task, metric1, metric2, "Local Correlation Pearson", results):
+        pearson, spearman = correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.05, Random=False)
+        results[task][metric1][metric2]["Local Correlation Pearson"] = pearson
+        results[task][metric1][metric2]["Local Correlation Spearman"] = spearman
+    if not already_computed(task, metric1, metric2, "Choice Agreement P@1", results):
+        score = correlation_best(task, metric1, metric2, Random=False)
+        results[task][metric1][metric2]["Choice Agreement P@1"] = score
+    if not already_computed(task, metric1, metric2, "Choice Agreement ANR", results):
+        anrs = correlation_ANR(task, metric1, metric2, Random=False)
+        results[task][metric1][metric2]["Choice Agreement ANR"] = anrs
 
     write_results(results)
     
