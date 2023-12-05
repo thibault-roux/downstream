@@ -12,10 +12,7 @@ from TTS.api import TTS
 from speechbrain.lobes.models.huggingface_wav2vec import HuggingFaceWav2Vec2
 import torch
 import torchaudio
-from typing import List
-from renard.pipeline import Pipeline
-from renard.pipeline.tokenization import NLTKTokenizer
-from renard.pipeline.ner import BertNamedEntityRecognizer, NEREntity
+from transformers import pipeline
 import jiwer
 
 
@@ -49,10 +46,13 @@ def get_memory_generate(task):
         tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
         return tts
     elif task == "ner":
-        pipeline = Pipeline(
-            [NLTKTokenizer(), BertNamedEntityRecognizer()], progress_report=None
+        ner_model = pipeline(
+            task='ner',
+            model="cmarkea/distilcamembert-base-ner",
+            tokenizer="cmarkea/distilcamembert-base-ner",
+            aggregation_strategy="simple"
         )
-        return pipeline
+        return ner_model
     else:
         raise ValueError("task is not recognized:", task)
 
@@ -65,8 +65,8 @@ def generate(text, task, memory):
         get_wav(text, tts)
         return text
     elif task == "ner":
-        pipeline = memory
-        ners = ner_annotate(text, pipeline)
+        ner_model = memory
+        ners = NER_bio(text, ner_model)
         return ners
     else:
         raise ValueError("task is not recognized:", task)
@@ -192,35 +192,27 @@ def load_w2v_model():
 
 # ----- NER ------ #
 
-# convert a list of NER entities into a list of BIO tags
-def from_ner_entities_to_bio(
-    tokens: List[str], entities: List[NEREntity]
-) -> List[str]:
-    """Convert a list of NER entities into a list of BIO tags
+def NER_bio(text, ner_model):
+    ners = ner_model(text)
+    bio_tags = ['O'] * len(text.split())
 
-    :param tokens: a list of tokens
-    :param entities: a list of NER entities
+    for ner_entity in ners:
+        entity_group = ner_entity['entity_group']
+        start_token = ner_entity['start']
+        end_token = ner_entity['end']
 
-    :return: a list of BIO tags
-    """
-    bio_tags = ["O"] * len(tokens)
+        # Convert entity start and end indices to token indices
+        start_token_index = len(text[:start_token].split())
+        end_token_index = len(text[:end_token].split())
 
-    for entity in entities:
-        bio_tags[entity.start_idx] = "B-" + entity.tag
-        for i in range(entity.start_idx + 1, entity.end_idx):
-            bio_tags[i] = "I-" + entity.tag
+        # Assign BIO tags to the tokens
+        if start_token_index < len(bio_tags):
+            bio_tags[start_token_index] = f'B-{entity_group}'
+
+        for i in range(start_token_index + 1, min(end_token_index + 1, len(bio_tags))):
+            bio_tags[i] = f'I-{entity_group}'
 
     return " ".join(bio_tags)
-
-def ner_annotate(pipeline: Pipeline, text: str) -> List[NEREntity]:
-    out = pipeline(text)
-    assert not out.entities is None
-    return out.entities
-
-def get_ner(text, pipeline):
-    entities = ner_annotate(pipeline, text)
-    bio_entities = from_ner_entities_to_bio(text.split(" "), entities)
-    return bio_entities
 
 def ner_error_rate(ref, hyp, memory): # ner error rate
     # pipeline = memory
