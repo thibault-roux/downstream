@@ -10,6 +10,7 @@ from bert_score import BERTScorer
 import os
 from TTS.api import TTS
 from speechbrain.lobes.models.huggingface_wav2vec import HuggingFaceWav2Vec2
+import torch
 import torchaudio
 
 def read_hats():
@@ -47,6 +48,7 @@ def generate(text, task, memory):
         translator = memory
         return translator.translate(text)
     elif task == "tts":
+        tts = memory
         get_wav(text, tts)
         return text
     else:
@@ -178,7 +180,7 @@ def load_metric(metric):
     if metric == "semdist":
         return semdist, SentenceTransformer('dangvantuan/sentence-camembert-large')
     elif metric == "bertscore":
-        return bertscore, BERTScorer(lang="en")*
+        return bertscore, BERTScorer(lang="en")
     elif metric == "speech_difference":
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
@@ -516,7 +518,7 @@ def compute_all_correlations(task, metric1, metric2):
     correlation_minED_extrinsic_local(task, metric1, metric2)
 
 def read_results():
-    # Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson,Local Correlation Spearman,Choice Agreement P@1,Choice Agreement ANR
+    # Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson pvalue 0.05,Local Correlation Spearman pvalue 0.05,Choice Agreement P@1,Choice Agreement ANR
     results = dict()
 
     # check if file does not exist
@@ -536,19 +538,21 @@ def read_results():
                     results[task][metric1][metric2] = dict()
                 results[task][metric1][metric2]["Global Correlation Pearson"] = float(line[3])
                 results[task][metric1][metric2]["Global Correlation Spearman"] = float(line[4])
-                results[task][metric1][metric2]["Local Correlation Pearson"] = float(line[5])
-                results[task][metric1][metric2]["Local Correlation Spearman"] = float(line[6])
-                results[task][metric1][metric2]["Choice Agreement P@1"] = float(line[7])
-                results[task][metric1][metric2]["Choice Agreement ANR"] = float(line[8])
+                results[task][metric1][metric2]["Local Correlation Pearson pvalue 0.05"] = float(line[5])
+                results[task][metric1][metric2]["Local Correlation Spearman pvalue 0.05"] = float(line[6])
+                results[task][metric1][metric2]["Local Correlation Pearson"] = float(line[7])
+                results[task][metric1][metric2]["Local Correlation Spearman"] = float(line[8])
+                results[task][metric1][metric2]["Choice Agreement P@1"] = float(line[9])
+                results[task][metric1][metric2]["Choice Agreement ANR"] = float(line[10])
     return results
 
 def write_results(results):
     with open("results/results.txt", "w", encoding="utf8") as file:
-        file.write("Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson,Local Correlation Spearman,Choice Agreement P@1,Choice Agreement ANR\n")
+        file.write("Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson pvalue 0.05,Local Correlation Spearman pvalue 0.05,,Local Correlation Pearson,Local Correlation Spearman,Choice Agreement P@1,Choice Agreement ANR\n")
         for task in results:
             for metric1 in results[task]:
                 for metric2 in results[task][metric1]:
-                    file.write(task + "," + metric1 + "," + metric2 + "," + str(results[task][metric1][metric2]["Global Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Global Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Local Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Local Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Choice Agreement P@1"]) + "," + str(results[task][metric1][metric2]["Choice Agreement ANR"]) + "\n")
+                    file.write(task + "," + metric1 + "," + metric2 + "," + str(results[task][metric1][metric2]["Global Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Global Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Local Correlation Pearson pvalue 0.05"]) + "," + str(results[task][metric1][metric2]["Local Correlation Spearman pvalue 0.05"]) + "," + str(results[task][metric1][metric2]["Local Correlation Pearson"]) + "," + str(results[task][metric1][metric2]["Local Correlation Spearman"]) + "," + str(results[task][metric1][metric2]["Choice Agreement P@1"]) + "," + str(results[task][metric1][metric2]["Choice Agreement ANR"]) + "\n")
     print("Results saved.")
 
 def already_computed(task, metric1, metric2, correlation, results):
@@ -576,8 +580,12 @@ def massive_test(task, metric1, metric2):
         pearson, spearman = correlation_minED_extrinsic(task, metric1, metric2, Random=False)
         results[task][metric1][metric2]["Global Correlation Pearson"] = pearson
         results[task][metric1][metric2]["Global Correlation Spearman"] = spearman
-    if not already_computed(task, metric1, metric2, "Local Correlation Pearson", results):
+    if not already_computed(task, metric1, metric2, "Local Correlation Pearson pvalue 0.05", results):
         pearson, spearman = correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.05, Random=False)
+        results[task][metric1][metric2]["Local Correlation Pearson pvalue 0.05"] = pearson
+        results[task][metric1][metric2]["Local Correlation Spearman pvalue 0.05"] = spearman
+    if not already_computed(task, metric1, metric2, "Local Correlation Pearson", results):
+        pearson, spearman = correlation_minED_extrinsic_local(task, metric1, metric2, signif=100, Random=False)
         results[task][metric1][metric2]["Local Correlation Pearson"] = pearson
         results[task][metric1][metric2]["Local Correlation Spearman"] = spearman
     if not already_computed(task, metric1, metric2, "Choice Agreement P@1", results):
@@ -601,5 +609,5 @@ if __name__ == '__main__':
 
     # check how to generate intermediate data when using the Phoneme Error Rate
 
-    # generate_all_data(task, metric1, metric2)
-    massive_test(task, metric1, metric2)
+    generate_all_data(task, metric1, metric2)
+    # massive_test(task, metric1, metric2)
