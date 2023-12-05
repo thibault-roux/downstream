@@ -38,35 +38,6 @@ def read_hats():
 
 
 
-# -------------------------- NER generation -------------------------- #
-
-# convert a list of NER entities into a list of BIO tags
-def from_ner_entities_to_bio(
-    tokens: List[str], entities: List[NEREntity]
-) -> List[str]:
-    """Convert a list of NER entities into a list of BIO tags
-
-    :param tokens: a list of tokens
-    :param entities: a list of NER entities
-
-    :return: a list of BIO tags
-    """
-    bio_tags = ["O"] * len(tokens)
-
-    for entity in entities:
-        bio_tags[entity.start_idx] = "B-" + entity.tag
-        for i in range(entity.start_idx + 1, entity.end_idx):
-            bio_tags[i] = "I-" + entity.tag
-
-    return " ".join(bio_tags)
-
-def ner_annotate(pipeline: Pipeline, text: str) -> List[NEREntity]:
-    out = pipeline(text)
-    assert not out.entities is None
-    return out.entities
-
-
-
 # -------------------------- Intermediate data -------------------------- #
 
 def get_memory_generate(task):
@@ -95,9 +66,8 @@ def generate(text, task, memory):
         return text
     elif task == "ner":
         pipeline = memory
-        entities = ner_annotate(pipeline, text)
-        bio_entities = from_ner_entities_to_bio(text.split(" "), entities)
-        return bio_entities
+        ners = ner_annotate(text, pipeline)
+        return ners
     else:
         raise ValueError("task is not recognized:", task)
 
@@ -220,6 +190,46 @@ def load_w2v_model():
     model_w2v2 = HuggingFaceWav2Vec2(model_hub_w2v2, save_path='./save')
     return model_w2v2
 
+# ----- NER ------ #
+
+# convert a list of NER entities into a list of BIO tags
+def from_ner_entities_to_bio(
+    tokens: List[str], entities: List[NEREntity]
+) -> List[str]:
+    """Convert a list of NER entities into a list of BIO tags
+
+    :param tokens: a list of tokens
+    :param entities: a list of NER entities
+
+    :return: a list of BIO tags
+    """
+    bio_tags = ["O"] * len(tokens)
+
+    for entity in entities:
+        bio_tags[entity.start_idx] = "B-" + entity.tag
+        for i in range(entity.start_idx + 1, entity.end_idx):
+            bio_tags[i] = "I-" + entity.tag
+
+    return " ".join(bio_tags)
+
+def ner_annotate(pipeline: Pipeline, text: str) -> List[NEREntity]:
+    out = pipeline(text)
+    assert not out.entities is None
+    return out.entities
+
+def get_ner(text, pipeline):
+    entities = ner_annotate(pipeline, text)
+    bio_entities = from_ner_entities_to_bio(text.split(" "), entities)
+    return bio_entities
+
+def ner_error_rate(ref, hyp, memory): # ner error rate
+    # pipeline = memory
+    # ref_ner = get_ner(ref, pipeline)
+    # hyp_ner = get_ner(hyp, pipeline)
+    # score = jiwer.wer(ref_ner, hyp_ner)
+    score = jiwer.wer(ref, hyp)
+    return score*100 # lower is better
+
 
 # ----- Common ------ #
 
@@ -233,6 +243,8 @@ def load_metric(metric):
         tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
         model_w2v2 = load_w2v_model()
         return speech_difference, (tts, model_w2v2)
+    elif metric == "ner_error_rate":
+        return ner_error_rate, 0 # memory is null since ner are already obtained
     else:
         raise ValueError("metric is not recognized:", metric)
 
@@ -650,9 +662,13 @@ if __name__ == '__main__':
     # metric1 = "semdist"
     # metric2 = "bertscore"
     
-    task = "tts"
+    # task = "tts"
+    # metric1 = "semdist"
+    # metric2 = "speech_difference"
+
+    task = "ner"
     metric1 = "semdist"
-    metric2 = "speech_difference"
+    metric2 = "ner_error_rate"
 
     # check how to generate intermediate data when using the Phoneme Error Rate
 
