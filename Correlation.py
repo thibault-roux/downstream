@@ -161,8 +161,8 @@ def speech_difference(ref, hyp, memory):
     ref_wav = get_wav(ref, tts)
     hyp_wav = get_wav(hyp, tts)
     # get features
-    ref_features = get_features(ref_wav, model_w2v2)
-    hyp_features = get_features(hyp_wav, model_w2v2)
+    ref_features = get_features(ref_wav, model_w2v2).detach().numpy().reshape(1, -1)
+    hyp_features = get_features(hyp_wav, model_w2v2).detach().numpy().reshape(1, -1)
     # compute cosine similarity
     cs = cosine_similarity(ref_features, hyp_features)
     return (1-cs)*100 # lower is better
