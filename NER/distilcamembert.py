@@ -33,7 +33,7 @@ def convert_to_bio(ners, text):
         for i in range(start_token_index + 1, min(end_token_index + 1, len(bio_tags))):
             bio_tags[i] = f'I-{entity_group}'
 
-    return bio_tags
+    return " ".join(bio_tags)
 
 # Example usage
 bio_tags = convert_to_bio(ners, text)
