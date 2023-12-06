@@ -12,6 +12,8 @@ from TTS.api import TTS
 from speechbrain.lobes.models.huggingface_wav2vec import HuggingFaceWav2Vec2
 import torch
 import torchaudio
+from transformers import pipeline
+import jiwer
 
 def read_hats():
     # dataset = [{"reference": ref, "hypA": hypA, "nbrA": nbrA, "hypB": hypB, "nbrB": nbrB}, ...]
@@ -40,6 +42,14 @@ def get_memory_generate(task):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
         return tts
+    elif task == "ner":
+        ner_model = pipeline(
+            task='ner',
+            model="cmarkea/distilcamembert-base-ner",
+            tokenizer="cmarkea/distilcamembert-base-ner",
+            aggregation_strategy="simple"
+        )
+        return ner_model
     else:
         raise ValueError("task is not recognized:", task)
 
@@ -51,6 +61,10 @@ def generate(text, task, memory):
         tts = memory
         get_wav(text, tts)
         return text
+    elif task == "ner":
+        ner_model = memory
+        ners = NER_bio(text, ner_model)
+        return ners
     else:
         raise ValueError("task is not recognized:", task)
 
@@ -173,6 +187,37 @@ def load_w2v_model():
     model_w2v2 = HuggingFaceWav2Vec2(model_hub_w2v2, save_path='./save')
     return model_w2v2
 
+# ----- NER ------ #
+
+def NER_bio(text, ner_model):
+    ners = ner_model(text)
+    bio_tags = ['O'] * len(text.split())
+
+    for ner_entity in ners:
+        entity_group = ner_entity['entity_group']
+        start_token = ner_entity['start']
+        end_token = ner_entity['end']
+
+        # Convert entity start and end indices to token indices
+        start_token_index = len(text[:start_token].split())
+        end_token_index = len(text[:end_token].split())
+
+        # Assign BIO tags to the tokens
+        if start_token_index < len(bio_tags):
+            bio_tags[start_token_index] = f'B-{entity_group}'
+
+        for i in range(start_token_index + 1, min(end_token_index + 1, len(bio_tags))):
+            bio_tags[i] = f'I-{entity_group}'
+
+    return " ".join(bio_tags)
+
+def ner_error_rate(ref, hyp, memory): # ner error rate
+    # pipeline = memory
+    # ref_ner = get_ner(ref, pipeline)
+    # hyp_ner = get_ner(hyp, pipeline)
+    # score = jiwer.wer(ref_ner, hyp_ner)
+    score = jiwer.wer(ref, hyp)
+    return score*100 # lower is better
 
 # ----- Common ------ #
 
@@ -186,6 +231,8 @@ def load_metric(metric):
         tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
         model_w2v2 = load_w2v_model()
         return speech_difference, (tts, model_w2v2)
+    elif metric == "ner_error_rate":
+        return ner_error_rate, 0 # memory is null since ner are already obtained
     else:
         raise ValueError("metric is not recognized:", metric)
 
@@ -606,6 +653,10 @@ if __name__ == '__main__':
     task = "tts"
     metric1 = "semdist"
     metric2 = "speech_difference"
+
+    # task = "ner"
+    # metric1 = "semdist"
+    # metric2 = "ner_error_rate"
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
