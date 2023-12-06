@@ -664,5 +664,5 @@ if __name__ == '__main__':
 
     # check how to generate intermediate data when using the Phoneme Error Rate
 
-    generate_all_data(task, metric1, metric2)
-    # massive_test(task, metric1, metric2)
+    # generate_all_data(task, metric1, metric2)
+    massive_test(task, metric1, metric2)

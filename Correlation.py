@@ -164,7 +164,7 @@ def speech_difference(ref, hyp, memory):
     ref_features = get_features(ref_wav, model_w2v2).detach().numpy().reshape(1, -1)
     hyp_features = get_features(hyp_wav, model_w2v2).detach().numpy().reshape(1, -1)
     # compute cosine similarity
-    cs = cosine_similarity(ref_features, hyp_features)
+    cs = cosine_similarity(ref_features, hyp_features)[0][0]
     return (1-cs)*100 # lower is better
 
 def load_w2v_model():
@@ -606,6 +606,11 @@ if __name__ == '__main__':
     task = "tts"
     metric1 = "semdist"
     metric2 = "speech_difference"
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
+    model_w2v2 = load_w2v_model()
+    memory = (tts, model_w2v2)
 
     # check how to generate intermediate data when using the Phoneme Error Rate
 
