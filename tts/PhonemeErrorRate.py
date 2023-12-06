@@ -4,13 +4,14 @@ from keras.models import load_model
 import pandas as pd
 import pickle
 import os
+import jiwer
 
 
 
 
 def phonetisor_save(txt, lecteur, namefile):
     phonemes = lecteur.lire_vers(txt)
-    with open("datasets/phonemes/" + namefile + ".txt", "w") as f:
+    with open("../datasets/phonemes/" + namefile + ".txt", "w") as f:
         f.write(phonemes)
     return phonemes
 
@@ -25,13 +26,19 @@ def phonetisor(text, lecteur): # save phonemes file if not exists
         if x not in accepted:
             namefile = namefile.replace(x, "_")
     # if phonemes file does not exists
-    if not os.path.isfile("datasets/phonemes/" + namefile + ".txt"):
+    if not os.path.isfile("../datasets/phonemes/" + namefile + ".txt"):
         phonemes = phonetisor_save(text, lecteur, namefile)
     else:
-        with open("datasets/phonemes/" + namefile + ".txt", "r") as f:
+        with open("../datasets/phonemes/" + namefile + ".txt", "r") as f:
             phonemes = f.read()
     # load audio file
     return phonemes
+
+
+def PhonemeErrorRate(ref, hyp, lecteur):
+    ref = phonetisor(ref, lecteur)
+    hyp = phonetisor(hyp, lecteur)
+    return jiwer.cer(ref, hyp)
 
 def test():
     dico_u, dico_m, df_w2p = pd.read_pickle(os.path.join(".", "PoemesProfonds", "data", "dicos.pickle"))
