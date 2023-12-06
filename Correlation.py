@@ -693,20 +693,17 @@ if __name__ == '__main__':
     # metric1 = "semdist"
     # metric2 = "bertscore"
     
-    task = "tts"
-    metric1 = "semdist"
-    metric2 = "speech_difference"
-
     # task = "ner"
     # metric1 = "semdist"
     # metric2 = "ner_error_rate"
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
-    model_w2v2 = load_w2v_model()
-    memory = (tts, model_w2v2)
+    # task = "tts"
+    # metric1 = "semdist"
+    # metric2 = "speech_difference"
 
-    # check how to generate intermediate data when using the Phoneme Error Rate
+    # task = "tts"
+    # metric1 = "phoneme_error_rate"
+    # metric2 = "speech_difference"
 
     generate_all_data(task, metric1, metric2)
     # massive_test(task, metric1, metric2)
