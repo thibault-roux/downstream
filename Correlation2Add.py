@@ -14,6 +14,13 @@ import torch
 import torchaudio
 from transformers import pipeline
 import jiwer
+import tts.PoemesProfonds.preprocessing as pp
+from tts.PoemesProfonds.lecture import *
+from keras.models import load_model
+import pandas as pd
+import pickle
+import nltk
+
 
 
 def read_hats():
@@ -31,8 +38,6 @@ def read_hats():
             dictionary["nbrB"] = int(line[4])
             dataset.append(dictionary)
     return dataset
-
-
 
 
 # -------------------------- Intermediate data -------------------------- #
@@ -178,10 +183,10 @@ def speech_difference(ref, hyp, memory):
     ref_wav = get_wav(ref, tts)
     hyp_wav = get_wav(hyp, tts)
     # get features
-    ref_features = get_features(ref_wav, model_w2v2)
-    hyp_features = get_features(hyp_wav, model_w2v2)
+    ref_features = get_features(ref_wav, model_w2v2).detach().numpy().reshape(1, -1)
+    hyp_features = get_features(hyp_wav, model_w2v2).detach().numpy().reshape(1, -1)
     # compute cosine similarity
-    cs = cosine_similarity(ref_features, hyp_features)
+    cs = cosine_similarity(ref_features, hyp_features)[0][0]
     return (1-cs)*100 # lower is better
 
 def load_w2v_model():
@@ -189,6 +194,37 @@ def load_w2v_model():
     model_hub_w2v2 = "LeBenchmark/wav2vec2-FR-7K-large"
     model_w2v2 = HuggingFaceWav2Vec2(model_hub_w2v2, save_path='./save')
     return model_w2v2
+
+# ----- TTS/Phoneme Error Rate ------ #
+
+def phonetisor_save(txt, lecteur, namefile):
+    phonemes = lecteur.lire_vers(txt)
+    with open("datasets/phonemes/" + namefile + ".txt", "w") as f:
+        f.write(phonemes)
+    return phonemes
+
+def phonetisor(text, lecteur): # save phonemes file if not exists
+    text = text.lower()
+    # check if files exist in dataset/phonemes
+    namefile = text
+    # remove unexpected character
+    accepted = "abcdefghijklmnopqrstuvwxyzéèêëàâäôöûüùîïç_"
+    for x in namefile:
+        if x not in accepted:
+            namefile = namefile.replace(x, "_")
+    # if phonemes file does not exists
+    if not os.path.isfile("datasets/phonemes/" + namefile + ".txt"):
+        phonemes = phonetisor_save(text, lecteur, namefile)
+    else:
+        with open("datasets/phonemes/" + namefile + ".txt", "r") as f:
+            phonemes = f.read()
+    # load audio file
+    return phonemes
+
+def PhonemeErrorRate(ref, hyp, lecteur):
+    ref = phonetisor(ref, lecteur)
+    hyp = phonetisor(hyp, lecteur)
+    return jiwer.cer(ref, hyp)
 
 # ----- NER ------ #
 
@@ -222,6 +258,19 @@ def ner_error_rate(ref, hyp, memory): # ner error rate
     score = jiwer.wer(ref, hyp)
     return score*100 # lower is better
 
+# ----- Character Error Rate ------ #
+
+def character_error_rate(ref, hyp, memory):
+    return jiwer.wer(ref, hyp)*100 # lower is better
+
+# ----- BLEU ------ #
+
+def bleu(ref, hyp, memory):
+    ref = ref.split(" ")
+    hyp = hyp.split(" ")
+    BLEUscore = nltk.translate.bleu_score.sentence_bleu(ref, hyp)
+    return BLEUscore
+
 
 # ----- Common ------ #
 
@@ -237,6 +286,17 @@ def load_metric(metric):
         return speech_difference, (tts, model_w2v2)
     elif metric == "ner_error_rate":
         return ner_error_rate, 0 # memory is null since ner are already obtained
+    elif metric == "phoneme_error_rate":
+        dico_u, dico_m, df_w2p = pd.read_pickle(os.path.join(".", "tts", "PoemesProfonds", "data", "dicos.pickle"))
+        ltr2idx, phon2idx, Tx, Ty = pp.chars2idx(df_w2p)
+        model_lire = load_model(os.path.join(".", "tts", "PoemesProfonds", "models", "lecteur", "lecteur_mdl.h5")) #"CE1_T12_l10.h5"))
+        lecteur = Lecteur(Tx, Ty, ltr2idx, phon2idx, dico_u, dico_m, n_brnn1=90, n_h1=80, net=model_lire, blank="_")
+        memory = lecteur
+        return PhonemeErrorRate, memory
+    elif metric == "cer":
+        return character_error_rate, 0 # memory is null
+    elif metric == "bleu":
+        return bleu, 0 # memory is null
     else:
         raise ValueError("metric is not recognized:", metric)
 
@@ -565,8 +625,6 @@ def generate_all_data(task, metric1, metric2):
 
 def compute_all_correlations(task, metric1, metric2):
     compute_correlation_intrinsic_extrinsic(task, metric1, metric2)
-    compute_correlation_minED_extrinsic(task, metric1, metric2)
-    correlation_minED_extrinsic_local(task, metric1, metric2)
 
 def read_results():
     # Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson pvalue 0.05,Local Correlation Spearman pvalue 0.05,Choice Agreement P@1,Choice Agreement ANR
@@ -654,15 +712,17 @@ if __name__ == '__main__':
     # metric1 = "semdist"
     # metric2 = "bertscore"
     
+    # task = "ner"
+    # metric1 = "semdist"
+    # metric2 = "ner_error_rate"
+
     # task = "tts"
     # metric1 = "semdist"
     # metric2 = "speech_difference"
 
-    task = "ner"
-    metric1 = "semdist"
-    metric2 = "ner_error_rate"
+    task = "tts"
+    metric1 = "phoneme_error_rate"
+    metric2 = "speech_difference"
 
-    # check how to generate intermediate data when using the Phoneme Error Rate
-
-    # generate_all_data(task, metric1, metric2)
-    massive_test(task, metric1, metric2)
+    generate_all_data(task, metric1, metric2)
+    # massive_test(task, metric1, metric2)
