@@ -720,9 +720,20 @@ if __name__ == '__main__':
     # metric1 = "semdist"
     # metric2 = "speech_difference"
 
-    task = "tts"
-    metric1 = "phoneme_error_rate"
-    metric2 = "speech_difference"
+    # task = "tts"
+    # metric1 = "phoneme_error_rate"
+    # metric2 = "speech_difference"
 
-    generate_all_data(task, metric1, metric2)
+    # generate_all_data(task, metric1, metric2)
     # massive_test(task, metric1, metric2)
+
+    intrinsic ["semdist" "semdist", "cer", "cer"]
+    extrinsic ["bertscore", "bleu", "bertscore", "bleu"]
+    tasks = ["traduction"]*len(intrinsic)
+
+    for i in range(len(intrinsic)):
+        task = tasks[i]
+        metric1 = intrinsic[i]
+        metric2 = extrinsic[i]
+        generate_all_data(task, metric1, metric2)
+        massive_test(task, metric1, metric2)
