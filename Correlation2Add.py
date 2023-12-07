@@ -8,16 +8,16 @@ from scipy.stats import spearmanr
 from sentence_transformers import SentenceTransformer
 from bert_score import BERTScorer
 import os
-from TTS.api import TTS
-from speechbrain.lobes.models.huggingface_wav2vec import HuggingFaceWav2Vec2
+# from TTS.api import TTS
+# from speechbrain.lobes.models.huggingface_wav2vec import HuggingFaceWav2Vec2
 import torch
 import torchaudio
-from transformers import pipeline
+# from transformers import pipeline
 import jiwer
-import tts.PoemesProfonds.preprocessing as pp
-from tts.PoemesProfonds.lecture import *
-from keras.models import load_model
-import pandas as pd
+# import tts.PoemesProfonds.preprocessing as pp
+# from tts.PoemesProfonds.lecture import *
+# from keras.models import load_model
+# import pandas as pd
 import pickle
 import nltk
 
@@ -268,7 +268,7 @@ def character_error_rate(ref, hyp, memory):
 def bleu(ref, hyp, memory):
     ref = ref.split(" ")
     hyp = hyp.split(" ")
-    BLEUscore = nltk.translate.bleu_score.sentence_bleu(ref, hyp)
+    BLEUscore = nltk.translate.bleu_score.sentence_bleu([ref], hyp)
     return BLEUscore
 
 
@@ -727,8 +727,8 @@ if __name__ == '__main__':
     # generate_all_data(task, metric1, metric2)
     # massive_test(task, metric1, metric2)
 
-    intrinsic ["semdist" "semdist", "cer", "cer"]
-    extrinsic ["bertscore", "bleu", "bertscore", "bleu"]
+    intrinsic = ["semdist", "semdist", "cer", "cer"]
+    extrinsic = ["bertscore", "bleu", "bertscore", "bleu"]
     tasks = ["traduction"]*len(intrinsic)
 
     for i in range(len(intrinsic)):
