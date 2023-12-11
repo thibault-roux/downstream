@@ -278,7 +278,7 @@ def load_metric(metric):
     if metric == "semdist":
         return semdist, SentenceTransformer('dangvantuan/sentence-camembert-large')
     elif metric == "bertscore":
-        return bertscore, BERTScorer(lang="en")
+        return bertscore, BERTScorer(lang="fr")
     elif metric == "speech_difference":
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         tts = TTS(model_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2", config_path="./tts/model/tts_models--multilingual--multi-dataset--xtts_v2/config.json").to(device)
@@ -741,7 +741,7 @@ if __name__ == '__main__':
         task = tasks[i]
         metric1 = intrinsic[i]
         metric2 = extrinsic[i]
-        # generate_all_data(task, metric1, metric2)
-        massive_test(task, metric1, metric2)
+        generate_all_data(task, metric1, metric2)
+        # massive_test(task, metric1, metric2)
 
     print("Ended without problem.")
