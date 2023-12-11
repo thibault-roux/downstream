@@ -269,7 +269,7 @@ def bleu(ref, hyp, memory):
     ref = ref.split(" ")
     hyp = hyp.split(" ")
     BLEUscore = nltk.translate.bleu_score.sentence_bleu([ref], hyp)
-    return BLEUscore
+    return (1-BLEUscore)*100 # lower is better
 
 
 # ----- Common ------ #
@@ -663,7 +663,7 @@ def read_results():
 
 def write_results(results):
     with open("results/results.txt", "w", encoding="utf8") as file:
-        file.write("Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson pvalue 0.05,Local Correlation Spearman pvalue 0.05,,Local Correlation Pearson,Local Correlation Spearman,Choice Agreement P@1,Choice Agreement ANR\n")
+        file.write("Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson pvalue 0.05,Local Correlation Spearman pvalue 0.05,Local Correlation Pearson,Local Correlation Spearman,Choice Agreement P@1,Choice Agreement ANR\n")
         for task in results:
             for metric1 in results[task]:
                 for metric2 in results[task][metric1]:
