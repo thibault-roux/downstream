@@ -545,7 +545,13 @@ def correlation_minED_extrinsic_local(task, metric1, metric2, signif=0.05, Rando
 
                 pvalue_pearsons.append(pearson[1])
                 pvalue_spearmans.append(spearman[1])
-    return sum(pearsons)/len(pearsons), sum(spearmans)/len(spearmans)
+    try:
+        pearson_avg = sum(pearsons)/len(pearsons)
+        spearman_avg = sum(spearmans)/len(spearmans)
+    except ZeroDivisionError:
+        pearson_avg = 0
+        spearman_avg = 0
+    return pearson_avg, spearman_avg
 
 
 def correlation_best(task, metric1, metric2, Random=False):
@@ -735,5 +741,7 @@ if __name__ == '__main__':
         task = tasks[i]
         metric1 = intrinsic[i]
         metric2 = extrinsic[i]
-        generate_all_data(task, metric1, metric2)
+        # generate_all_data(task, metric1, metric2)
         massive_test(task, metric1, metric2)
+
+    print("Ended without problem.")
