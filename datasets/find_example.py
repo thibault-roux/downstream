@@ -19,14 +19,14 @@ def finder():
 def bertscore(ref, hyp, memory):
     scorer = memory
     P, R, F1 = scorer.score([hyp], [ref])
-    return 100-F1.numpy()[0]*100 # lower is better
+    return 100-F1.numpy()[0] # lower is better
 
 def semdist(ref, hyp, memory):
     model = memory
     ref_projection = model.encode(ref).reshape(1, -1)
     hyp_projection = model.encode(hyp).reshape(1, -1)
     score = cosine_similarity(ref_projection, hyp_projection)[0][0]
-    return (1-score)*100 # lower is better
+    return (1-score) # lower is better
 
 
 
