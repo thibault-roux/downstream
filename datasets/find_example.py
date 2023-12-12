@@ -19,7 +19,7 @@ def finder():
 def bertscore(ref, hyp, memory):
     scorer = memory
     P, R, F1 = scorer.score([hyp], [ref])
-    return 100-F1.numpy()[0] # lower is better
+    return 1-F1.numpy()[0] # lower is better
 
 def semdist(ref, hyp, memory):
     model = memory
