@@ -261,7 +261,7 @@ def ner_error_rate(ref, hyp, memory): # ner error rate
 # ----- Character Error Rate ------ #
 
 def character_error_rate(ref, hyp, memory):
-    return jiwer.wer(ref, hyp)*100 # lower is better
+    return jiwer.cer(ref, hyp)*100 # lower is better
 
 # ----- BLEU ------ #
 
