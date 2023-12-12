@@ -1,6 +1,7 @@
 from bert_score import BERTScorer
 from sentence_transformers import SentenceTransformer
 import jiwer
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def finder():
@@ -31,10 +32,10 @@ def semdist(ref, hyp, memory):
 
 
 if __name__ == "__main__":
-    finder()
+    # finder()
 
     model_translation = BERTScorer(lang="fr")
-    mode_transcription = SentenceTransformer('dangvantuan/sentence-camembert-large')
+    model_transcription = SentenceTransformer('dangvantuan/sentence-camembert-large')
 
     reference_transcription = "à nos résultats"
     reference_translation = "to our results"
@@ -42,9 +43,11 @@ if __name__ == "__main__":
     corrected_hyp_transcription = ["un non résultat", "à non résultat", "un nos résultat", "un non résultats"]
     corrected_hyp_translation = ["a no result", "to no result", "a our result", "to no results"]
 
+    print()
     for i in range(len(corrected_hyp_transcription)):
         print("Hypothese:", corrected_hyp_transcription[i])
         print("Corrected Hypothese:", corrected_hyp_translation[i])
         print("SemDist:", semdist(reference_transcription, corrected_hyp_transcription[i], model_transcription))
         print("BERTScore:", bertscore(reference_translation, corrected_hyp_translation[i], model_translation))
         print()
+        input()
