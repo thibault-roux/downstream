@@ -41,7 +41,7 @@ if __name__ == "__main__":
     reference_translation = "to our results"
 
     corrected_hyp_transcription = ["un non résultat", "à non résultat", "un nos résultat", "un non résultats"]
-    corrected_hyp_translation = ["a no result", "to no result", "a our result", "to no results"]
+    corrected_hyp_translation = ["a no result", "to no result", "a our result", "a no results"]
 
     print()
     for i in range(len(corrected_hyp_transcription)):
