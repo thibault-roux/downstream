@@ -630,7 +630,13 @@ def generate_all_data(task, metric1, metric2):
 
 
 def compute_all_correlations(task, metric1, metric2):
-    compute_correlation_intrinsic_extrinsic(task, metric1, metric2)
+    print("task:", task)
+    print("metric1:", metric1)
+    print("metric2:", metric2)
+    pearson, spearman = compute_correlation_intrinsic_extrinsic(task, metric1, metric2)
+    print("pearson:", pearson)
+    print("spearman:", spearman)
+    print()
 
 def read_results():
     # Task,Intrisinc Metric,Extrinsic Metric,Global Correlation Pearson,Global Correlation Spearman,Local Correlation Pearson pvalue 0.05,Local Correlation Spearman pvalue 0.05,Choice Agreement P@1,Choice Agreement ANR
@@ -741,7 +747,8 @@ if __name__ == '__main__':
         task = tasks[i]
         metric1 = intrinsic[i]
         metric2 = extrinsic[i]
-        generate_all_data(task, metric1, metric2)
+        # generate_all_data(task, metric1, metric2)
         # massive_test(task, metric1, metric2)
+        compute_all_correlations(task, metric1, metric2)
 
     print("Ended without problem.")
